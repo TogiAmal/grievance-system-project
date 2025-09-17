@@ -5,6 +5,7 @@ Django settings for backend project.
 
 from pathlib import Path
 import os
+import dj_database_url # Import for Render database configuration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,12 +15,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-n7yg&)%m6^3zq^=(v+r(kpkunort82x!=%z%h&f2235^j(h9vx'
+# This will be read from an environment variable on Render
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-n7yg&)%m6^3zq^=(v+r(kpkunort82x!=%z%h&f2235^j(h9vx')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# This will be 'False' on Render by default
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
+# ALLOWED_HOSTS will be set automatically by Render
 ALLOWED_HOSTS = []
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
@@ -39,6 +46,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Whitenoise Middleware for serving static files in production
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.common.CommonMiddleware',
@@ -53,7 +62,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, '..', 'frontend', 'build')],
+        'DIRS': [], # DIRS can be empty as the frontend is separate
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -68,18 +77,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# Database Configuration for Render
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'support_desk',
-        'USER': 'support_admin',
-        'PASSWORD': 'sjcet@1234',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        # Default to your local DB for development if DATABASE_URL is not set
+        default='postgres://support_admin:sjcet@1234@localhost:5432/support_desk',
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
 
 
@@ -92,44 +97,34 @@ AUTH_PASSWORD_VALIDATORS = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    # Remember to add your live frontend URL here once it's deployed
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
 
+# Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata' # Set to your local time zone
 USE_I18N = True
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
 STATIC_URL = 'static/'
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, '..', 'frontend', 'build', 'static')
-]
+# This is where collectstatic will gather all of Django's static files.
+# It is required for deployment and fixes your error.
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+# Enable Whitenoise to serve files collected by collectstatic.
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# We have removed STATICFILES_DIRS to fix the warning, as Django doesn't need to find React's files.
 
 # --- EMAIL CONFIGURATION FOR VERIFICATION ---
-# For development: prints emails to the console where you run `manage.py runserver`
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# For production (e.g., using Gmail):
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'your-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'your-gmail-app-password' # Use an app-specific password
-# --------------------------------------------
 
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'api.CustomUser'
 
