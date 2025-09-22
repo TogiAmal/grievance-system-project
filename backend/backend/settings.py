@@ -83,6 +83,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://grievance-frontend-3fmk.onrender.com",
     # Remember to add your live frontend URL here
 ]
 
