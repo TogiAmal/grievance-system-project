@@ -5,14 +5,16 @@ from .models import CustomUser
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    # Add 'is_approved' to the list display and make it editable
-    list_display = ['username', 'email', 'name', 'is_active', 'is_approved']
-    list_filter = ['is_active', 'is_approved', 'role']
+    # 'is_approved' has been removed from the list_display
+    list_display = ['username', 'email', 'name', 'is_active']
+    # 'is_approved' has been removed from the list_filter
+    list_filter = ['is_active', 'role']
+    # 'is_approved' has been removed from the fieldsets
     fieldsets = UserAdmin.fieldsets + (
-        (None, {'fields': ('role', 'is_approved')}),
+        (None, {'fields': ('role',)}),
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
-        (None, {'fields': ('role', 'is_approved')}),
+        (None, {'fields': ('role',)}),
     )
 
 admin.site.register(CustomUser, CustomUserAdmin)
