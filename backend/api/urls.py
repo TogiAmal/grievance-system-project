@@ -3,7 +3,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-
+from .views import HealthCheckAPI
 # --- UPDATED IMPORTS ---
 from .views import (
     GrievanceViewSet, 
@@ -29,4 +29,5 @@ urlpatterns = [
     # URLs for JWT token login and refresh (cleaned up)
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('health/', HealthCheckAPI.as_view(), name='health-check'),
 ]

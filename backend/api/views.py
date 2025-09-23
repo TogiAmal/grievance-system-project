@@ -4,7 +4,7 @@ from rest_framework import viewsets, generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-
+from rest_framework.views import APIView
 from .models import CustomUser, Grievance, GrievanceComment
 from .serializers import (
     UserRegistrationSerializer,
@@ -96,3 +96,8 @@ class GrievanceViewSet(viewsets.ModelViewSet):
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+class HealthCheckAPI(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        return Response({"status": "ok", "message": "Backend is running."})    
