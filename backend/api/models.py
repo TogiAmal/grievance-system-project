@@ -15,7 +15,7 @@ class CustomUser(AbstractUser):
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     name = models.CharField(max_length=150, blank=True)
-    
+    is_approved = models.BooleanField(default=False)
     # UPDATED: Validator removed and max_length increased for flexibility
     admission_number = models.CharField(
         max_length=100, 

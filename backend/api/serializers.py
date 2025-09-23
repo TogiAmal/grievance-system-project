@@ -3,6 +3,7 @@
 from rest_framework import serializers
 from .models import CustomUser, Grievance, GrievanceComment
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed # Import this
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(style={'input_type': 'password'}, write_only=True)
@@ -59,6 +60,7 @@ class GrievanceSerializer(serializers.ModelSerializer):
             'updated_at', 'submitted_by', 'assigned_to', 'comments'
         )
 
+# --- UPDATED THIS SERIALIZER ---
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -66,10 +68,22 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add custom claims
         token['username'] = user.username
         token['role'] = user.role
-        # --- ADDED THIS LINE ---
-        token['name'] = user.name  # Include the user's full name
-
+        token['name'] = user.name
         return token
+
+    def validate(self, attrs):
+        # The default validation will check credentials and the 'is_active' status
+        data = super().validate(attrs)
+
+        # Now, we add our custom check for the 'is_approved' status
+        if not self.user.is_approved:
+            raise AuthenticationFailed(
+                'Your account is awaiting administrator approval.',
+                'not_approved'
+            )
+        
+        return data
+# --------------------------------
 
 class GrievanceStatusSerializer(serializers.ModelSerializer):
     class Meta:
