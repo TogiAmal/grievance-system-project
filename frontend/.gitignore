@@ -21,3 +21,13 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Dependency directories
+node_modules/
+venv/
+
+# Environment variables (NEVER commit this)
+.env
+
+# Python cache
+__pycache__/

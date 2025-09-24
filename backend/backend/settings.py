@@ -1,20 +1,25 @@
 # backend/settings.py
-
+from dotenv import load_dotenv
+load_dotenv()
 from pathlib import Path
 import os
 import dj_database_url
+from dotenv import load_dotenv # Import this
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# This line loads variables from your .env file
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-n7yg&)%m6^3zq^=(v+r(kpkunort82x!=%z%h&f2235^j(h9vx')
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# This will now be True locally (from .env) and False on Render
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS will be set automatically by Render
-ALLOWED_HOSTS = ['https://grievance-backend-v7ck.onrender.com']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+]
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
@@ -35,7 +40,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # Whitenoise Middleware for serving static files in production
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware', 
@@ -48,10 +52,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'backend.urls'
 
+# UPDATED TEMPLATES SECTION
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [], # DIRS can be empty as the frontend is separate
+        # This is now conditional. It only looks for React's files in DEBUG mode.
+        'DIRS': [os.path.join(BASE_DIR, '..', 'frontend', 'build')] if DEBUG else [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -65,13 +71,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# --- CORRECTED DATABASE CONFIGURATION ---
+# Database Configuration
 DATABASES = {
     'default': dj_database_url.config(
-        # Default to your local DB URL for development
         default='postgres://support_admin:sjcet@1234@localhost:5432/support_desk',
         conn_max_age=600,
-        # This line fixes the SSL error for local development
         ssl_require=os.environ.get('RENDER', False)
     )
 }
@@ -84,7 +88,6 @@ AUTH_PASSWORD_VALIDATORS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://grievance-frontend-3fmk.onrender.com",
-    # Remember to add your live frontend URL here
 ]
 
 # Internationalization
@@ -93,13 +96,21 @@ TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# Static files
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- EMAIL CONFIGURATION FOR VERIFICATION ---
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# CORRECTED EMAIL CONFIGURATION
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -110,12 +121,3 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
-# backend/settings.py
-
-# --- EMAIL CONFIGURATION FOR VERIFICATION ---
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') # Reads from Render environment
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') # Reads from Render environment
