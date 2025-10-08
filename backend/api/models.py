@@ -1,5 +1,3 @@
-# api/models.py
-
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -15,8 +13,7 @@ class CustomUser(AbstractUser):
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     name = models.CharField(max_length=150, blank=True)
-    
-    # UPDATED: Validator removed and max_length increased for flexibility
+    profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
     admission_number = models.CharField(
         max_length=100, 
         unique=True,
@@ -40,6 +37,14 @@ class Grievance(models.Model):
         ('ACTION_TAKEN', 'Action Taken'),
         ('RESOLVED', 'Resolved'),
     ]
+    
+    CHAT_STATUS_CHOICES = [
+        ('NONE', 'No Request'),
+        ('REQUESTED', 'Requested by User'),
+        ('ACCEPTED', 'Accepted by Admin'),
+        ('DECLINED', 'Declined by Admin'),
+    ]
+    evidence_image = models.ImageField(upload_to='grievance_evidence/', null=True, blank=True)
     submitted_by = models.ForeignKey(
         'api.CustomUser',
         on_delete=models.CASCADE,
@@ -56,6 +61,7 @@ class Grievance(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='SUBMITTED')
+    chat_status = models.CharField(max_length=10, choices=CHAT_STATUS_CHOICES, default='NONE')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -68,3 +74,13 @@ class GrievanceComment(models.Model):
 
     def __str__(self):
         return f'Comment by {self.user.username} on {self.grievance.title}'
+
+
+class ChatMessage(models.Model):
+    grievance = models.ForeignKey(Grievance, related_name='chat_messages', on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Message by {self.user.username}'

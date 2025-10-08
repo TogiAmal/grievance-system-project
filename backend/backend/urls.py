@@ -1,12 +1,15 @@
 # backend/urls.py
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # This line correctly routes all API calls to your api app
     path('api/', include('api.urls')),
-
-    # The catch-all route has been removed to fix the error.
 ]
+
+# This line tells Django to serve your uploaded media files (like profile pictures)
+# only when you are in local development (DEBUG=True).
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
