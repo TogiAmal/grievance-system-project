@@ -1,68 +1,80 @@
-// src/components/GrievanceStatus.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card, CardContent, Typography, Box, CircularProgress, Chip } from '@mui/material';
+import { Container, Typography, Paper, List, ListItem, ListItemText, Divider, Button, CircularProgress, Alert } from '@mui/material';
 
 const GrievanceStatus = () => {
     const [grievances, setGrievances] = useState([]);
+    const [selectedGrievance, setSelectedGrievance] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchGrievances = async () => {
             const token = localStorage.getItem('accessToken');
-            if (!token) { setLoading(false); return; }
+            if (!token) {
+                setError('You must be logged in to view your grievances.');
+                setLoading(false);
+                return;
+            }
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             try {
-                const response = await axios.get('http://127.0.0.1:8000/api/grievances/', {
-                    headers: { Authorization: `Bearer ${token}` }
+                const response = await axios.get(`${apiUrl}/api/grievances/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setGrievances(response.data);
-            } catch (error) {
-                console.error('Failed to fetch grievances:', error);
+            } catch (err) {
+                setError('Failed to fetch grievances.');
+                console.error(err);
             } finally {
                 setLoading(false);
             }
         };
         fetchGrievances();
     }, []);
-    
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'SUBMITTED': return 'primary';
-            case 'IN_REVIEW': return 'warning';
-            case 'ACTION_TAKEN': return 'info';
-            case 'RESOLVED': return 'success';
-            default: return 'default';
-        }
-    };
 
-    if (loading) {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+    if (loading) return <CircularProgress />;
+    if (error) return <Alert severity="error">{error}</Alert>;
+
+    // If a grievance is selected, show the detail view
+    if (selectedGrievance) {
+        return (
+            <Container maxWidth="md">
+                <Button onClick={() => setSelectedGrievance(null)} sx={{ mb: 2 }}>
+                    &larr; Back to List
+                </Button>
+                <Paper sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="h4" gutterBottom>{selectedGrievance.title}</Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}><strong>Status:</strong> {selectedGrievance.status}</Typography>
+                    <Typography variant="body2" sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>{selectedGrievance.description}</Typography>
+                </Paper>
+            </Container>
+        );
     }
 
+    // Otherwise, show the list of grievances
     return (
-        <div>
-            <Typography variant="h4" component="h1" gutterBottom>
-                Your Grievance Status
-            </Typography>
-            {grievances.length === 0 ? (
-                <Typography>You have no submitted grievances.</Typography>
-            ) : (
-                grievances.map(g => (
-                    <Card key={g.id} sx={{ mb: 2 }} elevation={2}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography variant="h6">{g.title}</Typography>
-                                <Chip label={g.status} color={getStatusColor(g.status)} />
-                            </Box>
-                            <Typography variant="body2" sx={{ mt: 2 }}>{g.description}</Typography>
-                            <Typography variant="caption" display="block" sx={{ mt: 2 }}>
-                                Submitted on: {new Date(g.created_at).toLocaleDateString()}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                ))
-            )}
-        </div>
+        <Container maxWidth="md">
+            <Typography variant="h4" gutterBottom>Your Submitted Grievances</Typography>
+            <Paper>
+                <List>
+                    {grievances.length > 0 ? grievances.map((grievance, index) => (
+                        <React.Fragment key={grievance.id}>
+                            <ListItem button onClick={() => setSelectedGrievance(grievance)}>
+                                <ListItemText 
+                                    primary={grievance.title} 
+                                    secondary={`Status: ${grievance.status} | Submitted: ${new Date(grievance.created_at).toLocaleDateString()}`} 
+                                />
+                            </ListItem>
+                            {index < grievances.length - 1 && <Divider />}
+                        </React.Fragment>
+                    )) : (
+                        <ListItem>
+                            <ListItemText primary="You have not submitted any grievances yet." />
+                        </ListItem>
+                    )}
+                </List>
+            </Paper>
+        </Container>
     );
 };
 

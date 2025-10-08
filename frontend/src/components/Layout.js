@@ -1,62 +1,86 @@
-// src/components/Layout.js
-import React, { useState } from 'react';
-import { AppBar, Toolbar, Typography, Button, Container, Box, IconButton, Menu, MenuItem, useTheme, useMediaQuery } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { AppBar, Toolbar, Typography, Button, Container, Box, IconButton, Menu, MenuItem, useTheme, useMediaQuery, Badge, Avatar, Divider } from '@mui/material';
 import { Link, useNavigate, Outlet } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import Chatbot from './Chatbot';
 
 const Layout = () => {
     const navigate = useNavigate();
-    const userName = localStorage.getItem('userName');
+    const [user, setUser] = useState(null);
     const isLoggedIn = !!localStorage.getItem('accessToken');
+    const [notificationCount, setNotificationCount] = useState(0);
     
-    // Hooks to detect screen size
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    // State to manage the mobile menu anchor
-    const [anchorEl, setAnchorEl] = useState(null);
-    const menuOpen = Boolean(anchorEl);
+    const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
+    const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+    
+    useEffect(() => {
+        if (isLoggedIn) {
+            const userDataString = localStorage.getItem('user');
+            if (userDataString) {
+                setUser(JSON.parse(userDataString));
+            }
+            // Notification WebSocket logic would go here
+        }
+    }, [isLoggedIn]);
 
-    const handleMenuOpen = (event) => {
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleMenuClose = () => {
-        setAnchorEl(null);
-    };
-
+    const handleMobileMenuOpen = (event) => setMobileMenuAnchor(event.currentTarget);
+    const handleMobileMenuClose = () => setMobileMenuAnchor(null);
+    const handleUserMenuOpen = (event) => setUserMenuAnchor(event.currentTarget);
+    const handleUserMenuClose = () => setUserMenuAnchor(null);
+    
     const handleNavigate = (path) => {
+        if (path === '/inbox') setNotificationCount(0);
         navigate(path);
-        handleMenuClose();
+        handleMobileMenuClose();
+        handleUserMenuClose();
     };
 
     const handleLogout = () => {
         localStorage.clear();
-        window.dispatchEvent(new CustomEvent('userLoggedOut'));
-        handleMenuClose(); // Close menu before navigating
         navigate('/login');
     };
 
     const renderDesktopMenu = () => (
         <>
-            <Typography sx={{ mr: 2 }}>Welcome, {userName}</Typography>
             <Button color="inherit" component={Link} to="/dashboard">Home</Button>
+            <Button color="inherit" component={Link} to="/add-grievance">Add Grievance</Button>
             <Button color="inherit" component={Link} to="/status">Grievance Status</Button>
+            <Button color="inherit" onClick={() => handleNavigate('/inbox')}>
+                <Badge badgeContent={notificationCount} color="error">Inbox</Badge>
+            </Button>
             <Button color="inherit" component={Link} to="/faq">FAQ</Button>
-            <Button color="inherit" onClick={handleLogout}>Logout</Button>
+            
+            <IconButton onClick={handleUserMenuOpen} sx={{ p: 0, ml: 2 }}>
+                <Avatar alt={user?.name} src={user?.profile_image ? `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${user.profile_image}` : '/default-avatar.png'} />
+            </IconButton>
+            <Menu anchorEl={userMenuAnchor} open={Boolean(userMenuAnchor)} onClose={handleUserMenuClose}>
+                <MenuItem disabled>Signed in as {user?.name}</MenuItem>
+                <Divider />
+                <MenuItem onClick={() => handleNavigate('/profile')}>Profile</MenuItem>
+                <MenuItem onClick={handleLogout}>Logout</MenuItem>
+            </Menu>
         </>
     );
 
     const renderMobileMenu = () => (
         <>
-            <IconButton color="inherit" onClick={handleMenuOpen}>
-                <MenuIcon />
+            <IconButton color="inherit" onClick={handleMobileMenuOpen}>
+                <Badge badgeContent={notificationCount} color="error">
+                    <MenuIcon />
+                </Badge>
             </IconButton>
-            <Menu anchorEl={anchorEl} open={menuOpen} onClose={handleMenuClose}>
-                <MenuItem disabled>Welcome, {userName}</MenuItem>
+            <Menu anchorEl={mobileMenuAnchor} open={Boolean(mobileMenuAnchor)} onClose={handleMobileMenuClose}>
+                <MenuItem onClick={() => handleNavigate('/profile')}>
+                    <Avatar alt={user?.name} src={user?.profile_image ? `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${user.profile_image}` : '/default-avatar.png'} sx={{ mr: 2 }} /> Profile
+                </MenuItem>
+                <Divider />
                 <MenuItem onClick={() => handleNavigate('/dashboard')}>Home</MenuItem>
+                <MenuItem onClick={() => handleNavigate('/add-grievance')}>Add Grievance</MenuItem>
                 <MenuItem onClick={() => handleNavigate('/status')}>Grievance Status</MenuItem>
+                <MenuItem onClick={() => handleNavigate('/inbox')}>Inbox</MenuItem>
                 <MenuItem onClick={() => handleNavigate('/faq')}>FAQ</MenuItem>
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
@@ -95,4 +119,4 @@ const Layout = () => {
     );
 };
 
-export default Layout;
+export default Layout;  

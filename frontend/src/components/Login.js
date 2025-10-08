@@ -1,28 +1,12 @@
-// src/components/Login.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button, TextField, Container, Typography, Box, Paper, Alert, Grid, Avatar } from '@mui/material';
 
 const grievanceCellMembers = [
-    {
-        name: 'Dr. John Doe',
-        designation: 'Principal',
-        phone: '+91 98765 43210',
-        imageUrl: '/images/g3.jpeg'
-    },
-    {
-        name: 'Prof. Jane Smith',
-        designation: 'Dean of Student Affairs',
-        phone: '+91 98765 43211',
-        imageUrl: '/images/g1.webp'
-    },
-    {
-        name: 'Dr. Alex Ray',
-        designation: 'Head of Grievance Cell',
-        phone: '+91 98765 43212',
-        imageUrl: '/images/g2.jpeg'
-    }
+    { name: 'Dr. John Doe', designation: 'Principal', phone: '+91 98765 43210', imageUrl: '/images/g3.jpeg' },
+    { name: 'Prof. Jane Smith', designation: 'Dean of Student Affairs', phone: '+91 98765 43211', imageUrl: '/images/g1.webp' },
+    { name: 'Dr. Alex Ray', designation: 'Head of Grievance Cell', phone: '+91 98765 43212', imageUrl: '/images/g2.jpeg' }
 ];
 
 const decodeToken = (token) => {
@@ -43,28 +27,37 @@ const Login = () => {
         e.preventDefault();
         setError('');
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/token/', {
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+            const response = await axios.post(`${apiUrl}/api/token/`, {
                 username: admissionNumber,
                 password: password,
             });
 
-            localStorage.setItem('accessToken', response.data.access);
-            localStorage.setItem('refreshToken', response.data.refresh);
+            const { access, refresh } = response.data;
+            localStorage.setItem('accessToken', access);
+            localStorage.setItem('refreshToken', refresh);
             
-            const userData = decodeToken(response.data.access);
-            if (userData) {
-                localStorage.setItem('userRole', userData.role);
-                localStorage.setItem('username', userData.username);
-                // --- ADD THIS LINE TO SAVE THE USER'S FULL NAME ---
-                localStorage.setItem('userName', userData.name);
-            }
-            
-            window.dispatchEvent(new CustomEvent('userLoggedIn'));
+            const tokenData = decodeToken(access);
+            if (tokenData) {
+                const userDetailsResponse = await axios.get(`${apiUrl}/api/users/${tokenData.user_id}/`, {
+                    headers: { 'Authorization': `Bearer ${access}` }
+                });
+                const user = userDetailsResponse.data;
 
-            if (userData && userData.role === 'admin') {
-                navigate('/admin/dashboard');
+                // Save all necessary items to localStorage
+                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('userRole', user.role);
+                localStorage.setItem('userName', user.name);
+                
+                sessionStorage.setItem('justLoggedIn', 'true');
+
+                if (user.role === 'admin') {
+                    navigate('/admin/dashboard');
+                } else {
+                    navigate('/dashboard');
+                }
             } else {
-                navigate('/dashboard');
+                setError('Invalid login token received.');
             }
         } catch (err) {
             setError('Invalid Admission Number or Password.');
@@ -107,17 +100,17 @@ const Login = () => {
                             
                             {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
                             
-                            <Button
-                                type="submit"
-                                fullWidth
-                                variant="contained"
-                                sx={{ mt: 3, mb: 2, py: 1.5 }}
-                            >
+                            <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.5 }}>
                                 Sign In
                             </Button>
-                            <Typography variant="body2" align="center">
+                            <Typography variant="body2" align="center" sx={{ mb: 1 }}>
                                 <Link to="/register" style={{ textDecoration: 'none' }}>
                                     {"Don't have an account? Register"}
+                                </Link>
+                            </Typography>
+                            <Typography variant="body2" align="center">
+                                <Link to="/request-password-reset" style={{ textDecoration: 'none' }}>
+                                    Forgot Password?
                                 </Link>
                             </Typography>
                         </Box>
@@ -131,7 +124,7 @@ const Login = () => {
                 </Typography>
                 <Grid container spacing={4} justifyContent="center">
                     {grievanceCellMembers.map((member) => (
-                        <Grid item xs={12} sm={6} md={4} key={member.name}>
+                        <Grid xs={12} sm={6} md={4} key={member.name}>
                             <Paper elevation={3} sx={{ p: 2, textAlign: 'center', borderRadius: 2 }}>
                                 <Avatar
                                     alt={member.name}

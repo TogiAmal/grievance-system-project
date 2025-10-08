@@ -1,84 +1,78 @@
-// src/components/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card, CardContent, Typography, Grid, Select, MenuItem, CircularProgress, Box } from '@mui/material';
+import { Container, Typography, Grid, Paper } from '@mui/material';
+import GrievanceTable from './GrievanceTable';
 
 const AdminDashboard = () => {
+    const [stats, setStats] = useState(null);
     const [grievances, setGrievances] = useState([]);
     const [loading, setLoading] = useState(true);
-    const token = localStorage.getItem('accessToken');
-
-    const fetchAllGrievances = async () => {
-        if (!token) { setLoading(false); return; }
-        try {
-            const response = await axios.get('http://127.0.0.1:8000/api/grievances/', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setGrievances(response.data);
-        } catch (error) {
-            console.error('Failed to fetch grievances:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        fetchAllGrievances();
-    }, [token]);
+        const fetchData = async () => {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                setError('Authentication token not found. Please log in.');
+                setLoading(false);
+                return;
+            }
+            
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-    const handleStatusUpdate = async (id, newStatus) => {
-        try {
-            await axios.patch(`http://127.0.0.1:8000/api/grievances/${id}/`, { status: newStatus }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            // Refresh the list to show the change
-            fetchAllGrievances(); 
-        } catch (error) {
-            console.error("Failed to update status:", error);
-        }
-    };
+            try {
+                const [statsRes, grievancesRes] = await Promise.all([
+                    axios.get(`${apiUrl}/api/grievances/stats/`, { headers }),
+                    axios.get(`${apiUrl}/api/grievances/`, { headers })
+                ]);
+                
+                setStats(statsRes.data);
+                setGrievances(grievancesRes.data);
+            } catch (err) {
+                setError('Failed to fetch admin data. You may not have permission.');
+                console.error("Failed to fetch admin data", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
-    if (loading) {
-        return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
-    }
+    if (loading) return <Typography>Loading dashboard...</Typography>;
+    if (error) return <Typography color="error">{error}</Typography>;
 
     return (
-        <div>
-            <Typography variant="h4" component="h1" gutterBottom>
-                Admin Grievance Management
-            </Typography>
-            <Grid container spacing={3}>
-                {grievances.map(g => (
-                    <Grid item xs={12} md={6} lg={4} key={g.id}>
-                        <Card elevation={3}>
-                            <CardContent>
-                                <Typography variant="h6" component="div">{g.title}</Typography>
-                                <Typography color="text.secondary" gutterBottom>
-                                    Submitted by: {g.submitted_by.username} ({g.submitted_by.role})
-                                </Typography>
-                                <Typography variant="body2" sx={{ mt: 2 }}>{g.description}</Typography>
-                                <Typography variant="caption" display="block" sx={{ mt: 2 }}>
-                                    Submitted on: {new Date(g.created_at).toLocaleDateString()}
-                                </Typography>
-                                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
-                                    <Typography sx={{ mr: 2 }}>Status:</Typography>
-                                    <Select
-                                        value={g.status}
-                                        onChange={(e) => handleStatusUpdate(g.id, e.target.value)}
-                                        size="small"
-                                    >
-                                        <MenuItem value="SUBMITTED">Submitted</MenuItem>
-                                        <MenuItem value="IN_REVIEW">In Review</MenuItem>
-                                        <MenuItem value="ACTION_TAKEN">Action Taken</MenuItem>
-                                        <MenuItem value="RESOLVED">Resolved</MenuItem>
-                                    </Select>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
+        <Container maxWidth="lg">
+            <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>Admin Dashboard</Typography>
+            
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+                {/* 'item' prop removed from the Grid components below */}
+                <Grid xs={12} sm={4}>
+                    <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h6">Total Grievances</Typography>
+                        <Typography variant="h4">{stats?.total_grievances}</Typography>
+                    </Paper>
+                </Grid>
+                <Grid xs={12} sm={4}>
+                    <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h6">Pending</Typography>
+                        <Typography variant="h4" color="error">{stats?.pending_grievances}</Typography>
+                    </Paper>
+                </Grid>
+                <Grid xs={12} sm={4}>
+                    <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h6">Resolved</Typography>
+                        <Typography variant="h4" color="primary">{stats?.resolved_grievances}</Typography>
+                    </Paper>
+                </Grid>
             </Grid>
-        </div>
+
+            <Paper sx={{ p: 2, height: 600, width: '100%' }}>
+                <Typography variant="h5" gutterBottom>All Submitted Grievances</Typography>
+                <GrievanceTable grievances={grievances} />
+            </Paper>
+        </Container>
     );
 };
 

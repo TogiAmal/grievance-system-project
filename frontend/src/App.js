@@ -1,30 +1,62 @@
-// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+
 import Login from './components/Login';
 import Registration from './components/Registration';
 import GrievanceStatus from './components/GrievanceStatus';
 import Dashboard from './components/Dashboard';
 import Layout from './components/Layout';
 import VerifyEmail from './components/VerifyEmail';
-import FAQ from './components/FAQ'; // <-- 1. Import the new FAQ component
+import FAQ from './components/FAQ';
+import AddGrievance from './components/AddGrievance';
+import InboxPage from './components/InboxPage';
+import ProfilePage from './components/ProfilePage';
+import StatsPage from './components/StatsPage'; // <-- Import was missing
+import UserRoute from './components/UserRoute';
+import AdminLayout from './components/AdminLayout';
+import AdminDashboard from './components/AdminDashboard';
+import GrievanceDetailAdmin from './components/GrievanceDetailAdmin';
+import UserManagementPage from './components/UserManagementPage';
+import AdminRoute from './components/AdminRoute';
+import RequestPasswordResetPage from './components/RequestPasswordResetPage';
+import PasswordResetConfirmPage from './components/PasswordResetConfirmPage';
+
 
 function App() {
     return (
         <Router>
             <Routes>
-                {/* The Layout component is the parent of all other routes */}
+                {/* Public routes */}
                 <Route element={<Layout />}>
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Registration />} />
                     <Route path="/verify-email/:uidb64/:token" element={<VerifyEmail />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/status" element={<GrievanceStatus />} />
-                    
-                    {/* 2. Add the new route for the FAQ page */}
-                    <Route path="/faq" element={<FAQ />} />
-                    
+                    <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
+                    <Route path="/reset-password/:uidb64/:token" element={<PasswordResetConfirmPage />} />
                     <Route path="/" element={<Login />} />
+                </Route>
+                
+                {/* Protected User routes */}
+                <Route element={<UserRoute />}>
+                    <Route element={<Layout />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/status" element={<GrievanceStatus />} />
+                        <Route path="/faq" element={<FAQ />} />
+                        <Route path="/add-grievance" element={<AddGrievance />} />
+                        <Route path="/inbox" element={<InboxPage />} />
+                        <Route path="/profile" element={<ProfilePage />} />
+                    </Route>
+                </Route>
+
+                {/* Protected Admin routes */}
+                <Route element={<AdminRoute />}>
+                    <Route element={<AdminLayout />}>
+                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                        <Route path="/admin/grievance/:id" element={<GrievanceDetailAdmin />} />
+                        <Route path="/admin/users" element={<UserManagementPage />} />
+                        <Route path="/admin/inbox" element={<InboxPage />} />
+                        <Route path="/admin/stats" element={<StatsPage />} />
+                    </Route>
                 </Route>
             </Routes>
         </Router>
