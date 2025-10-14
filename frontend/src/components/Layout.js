@@ -1,3 +1,4 @@
+// src/components/Layout.js
 import React, { useState, useEffect } from 'react';
 import { AppBar, Toolbar, Typography, Button, Container, Box, IconButton, Menu, MenuItem, useTheme, useMediaQuery, Badge, Avatar, Divider } from '@mui/material';
 import { Link, useNavigate, Outlet } from 'react-router-dom';
@@ -15,22 +16,37 @@ const Layout = () => {
 
     const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
     const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-    
+
     useEffect(() => {
-        if (isLoggedIn) {
+        const loadUser = () => {
             const userDataString = localStorage.getItem('user');
             if (userDataString) {
                 setUser(JSON.parse(userDataString));
             }
-            // Notification WebSocket logic would go here
-        }
+        };
+        
+        loadUser(); // Load user on initial render
+
+        // --- THIS IS THE NEW LISTENER ---
+        // Listen for the 'profileUpdated' event to update the user in real-time
+        const handleProfileUpdate = () => {
+            loadUser();
+        };
+        window.addEventListener('profileUpdated', handleProfileUpdate);
+
+        // Cleanup listener when the component unmounts
+        return () => {
+            window.removeEventListener('profileUpdated', handleProfileUpdate);
+        };
+        // --------------------------
+
     }, [isLoggedIn]);
 
     const handleMobileMenuOpen = (event) => setMobileMenuAnchor(event.currentTarget);
     const handleMobileMenuClose = () => setMobileMenuAnchor(null);
     const handleUserMenuOpen = (event) => setUserMenuAnchor(event.currentTarget);
     const handleUserMenuClose = () => setUserMenuAnchor(null);
-    
+
     const handleNavigate = (path) => {
         if (path === '/inbox') setNotificationCount(0);
         navigate(path);
@@ -40,6 +56,7 @@ const Layout = () => {
 
     const handleLogout = () => {
         localStorage.clear();
+        setUser(null); // Clear user state on logout
         navigate('/login');
     };
 
@@ -60,6 +77,7 @@ const Layout = () => {
                 <MenuItem disabled>Signed in as {user?.name}</MenuItem>
                 <Divider />
                 <MenuItem onClick={() => handleNavigate('/profile')}>Profile</MenuItem>
+                <MenuItem onClick={() => handleNavigate('/change-password')}>Change Password</MenuItem>
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
         </>
@@ -82,6 +100,7 @@ const Layout = () => {
                 <MenuItem onClick={() => handleNavigate('/status')}>Grievance Status</MenuItem>
                 <MenuItem onClick={() => handleNavigate('/inbox')}>Inbox</MenuItem>
                 <MenuItem onClick={() => handleNavigate('/faq')}>FAQ</MenuItem>
+                <MenuItem onClick={() => handleNavigate('/change-password')}>Change Password</MenuItem>
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
         </>
@@ -119,4 +138,4 @@ const Layout = () => {
     );
 };
 
-export default Layout;  
+export default Layout;

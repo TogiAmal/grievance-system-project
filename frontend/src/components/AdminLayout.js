@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { AppBar, Toolbar, Typography, Button, Container, Box, IconButton, Menu, MenuItem, useTheme, useMediaQuery, Badge } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Container, Box, IconButton, Menu, MenuItem, useTheme, useMediaQuery, Badge, Divider, ListItemText } from '@mui/material';
 import { Link, useNavigate, Outlet } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 
 const AdminLayout = () => {
     const navigate = useNavigate();
     const userName = localStorage.getItem('userName');
     const isLoggedIn = !!localStorage.getItem('accessToken');
-    const [notificationCount, setNotificationCount] = useState(0);
+    const [notifications, setNotifications] = useState([]);
     
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    const [anchorEl, setAnchorEl] = useState(null);
-    const menuOpen = Boolean(anchorEl);
-    
-    // This useEffect sets up the global notification listener for the admin
+    const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
+    const [notificationMenuAnchor, setNotificationMenuAnchor] = useState(null);
+
     useEffect(() => {
         if (isLoggedIn) {
             const token = localStorage.getItem('accessToken');
@@ -26,29 +26,34 @@ const AdminLayout = () => {
             const notificationSocket = new WebSocket(wsUrl);
 
             notificationSocket.onmessage = (e) => {
-                setNotificationCount(prev => prev + 1);
+                const data = JSON.parse(e.data);
+                setNotifications(prev => [data, ...prev]);
             };
-
-            notificationSocket.onclose = () => {
-                console.error('Notification socket closed');
-            };
-
+            notificationSocket.onclose = () => console.error('Notification socket closed');
             return () => notificationSocket.close();
         }
     }, [isLoggedIn]);
 
-    const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
-    const handleMenuClose = () => setAnchorEl(null);
+    const handleMobileMenuOpen = (event) => setMobileMenuAnchor(event.currentTarget);
+    const handleMobileMenuClose = () => setMobileMenuAnchor(null);
+    const handleNotificationMenuOpen = (event) => setNotificationMenuAnchor(event.currentTarget);
+    const handleNotificationMenuClose = () => setNotificationMenuAnchor(null);
+    
     const handleNavigate = (path) => {
-        if (path === '/admin/inbox') setNotificationCount(0); // Reset count on navigation
         navigate(path);
-        handleMenuClose();
+        handleMobileMenuClose();
     };
 
+    const handleNotificationClick = (grievanceId) => {
+        // Clear notifications when one is clicked for simplicity
+        setNotifications([]);
+        handleNotificationMenuClose();
+        navigate(`/admin/grievance/${grievanceId}`);
+    };
+    
     const handleLogout = () => {
         localStorage.clear();
-        window.dispatchEvent(new CustomEvent('userLoggedOut'));
-        handleMenuClose();
+        handleMobileMenuClose();
         navigate('/login');
     };
 
@@ -56,24 +61,25 @@ const AdminLayout = () => {
         <>
             <Typography sx={{ mr: 2 }}>Admin: {userName}</Typography>
             <Button color="inherit" component={Link} to="/admin/dashboard">Dashboard</Button>
-            <Button color="inherit" onClick={() => handleNavigate('/admin/inbox')}>
-                <Badge badgeContent={notificationCount} color="error">
-                    Inbox
-                </Badge>
-            </Button>
+            <Button color="inherit" component={Link} to="/admin/inbox">Inbox</Button>
             <Button color="inherit" component={Link} to="/admin/users">Manage Users</Button>
+            
+            <IconButton color="inherit" onClick={handleNotificationMenuOpen}>
+                <Badge badgeContent={notifications.length} color="error">
+                    <NotificationsIcon />
+                </Badge>
+            </IconButton>
+
             <Button color="inherit" onClick={handleLogout}>Logout</Button>
         </>
     );
 
     const renderMobileMenu = () => (
         <>
-            <IconButton color="inherit" onClick={handleMenuOpen}>
-                <Badge badgeContent={notificationCount} color="error">
-                    <MenuIcon />
-                </Badge>
+            <IconButton color="inherit" onClick={handleMobileMenuOpen}>
+                <MenuIcon />
             </IconButton>
-            <Menu anchorEl={anchorEl} open={menuOpen} onClose={handleMenuClose}>
+            <Menu anchorEl={mobileMenuAnchor} open={Boolean(mobileMenuAnchor)} onClose={handleMobileMenuClose}>
                 <MenuItem disabled>Admin: {userName}</MenuItem>
                 <MenuItem onClick={() => handleNavigate('/admin/dashboard')}>Dashboard</MenuItem>
                 <MenuItem onClick={() => handleNavigate('/admin/inbox')}>Inbox</MenuItem>
@@ -98,6 +104,28 @@ const AdminLayout = () => {
                 </Toolbar>
             </AppBar>
             
+            <Menu
+                anchorEl={notificationMenuAnchor}
+                open={Boolean(notificationMenuAnchor)}
+                onClose={handleNotificationMenuClose}
+                MenuListProps={{ 'aria-labelledby': 'notifications-button' }}
+            >
+                <MenuItem disabled>
+                    <Typography variant="subtitle1">Notifications</Typography>
+                </MenuItem>
+                <Divider />
+                {notifications.length > 0 ? notifications.map((notif, index) => (
+                    <MenuItem key={index} onClick={() => handleNotificationClick(notif.grievance_id)}>
+                        <ListItemText 
+                            primary={`New Chat Request`}
+                            secondary={notif.message} 
+                        />
+                    </MenuItem>
+                )) : (
+                    <MenuItem disabled>No new notifications</MenuItem>
+                )}
+            </Menu>
+
             <main>
                 <Container sx={{ mt: 4, mb: 4 }}>
                     <Outlet />

@@ -1,17 +1,16 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 
+// Import all components
 import Login from './components/Login';
-import Registration from './components/Registration';
 import GrievanceStatus from './components/GrievanceStatus';
 import Dashboard from './components/Dashboard';
 import Layout from './components/Layout';
-import VerifyEmail from './components/VerifyEmail';
 import FAQ from './components/FAQ';
 import AddGrievance from './components/AddGrievance';
 import InboxPage from './components/InboxPage';
 import ProfilePage from './components/ProfilePage';
-import StatsPage from './components/StatsPage'; // <-- Import was missing
+import StatsPage from './components/StatsPage';
 import UserRoute from './components/UserRoute';
 import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './components/AdminDashboard';
@@ -20,23 +19,21 @@ import UserManagementPage from './components/UserManagementPage';
 import AdminRoute from './components/AdminRoute';
 import RequestPasswordResetPage from './components/RequestPasswordResetPage';
 import PasswordResetConfirmPage from './components/PasswordResetConfirmPage';
-
+import ChangePasswordPage from './components/ChangePasswordPage';
 
 function App() {
     return (
         <Router>
             <Routes>
-                {/* Public routes */}
+                {/* Public routes visible to everyone */}
                 <Route element={<Layout />}>
                     <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Registration />} />
-                    <Route path="/verify-email/:uidb64/:token" element={<VerifyEmail />} />
                     <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
                     <Route path="/reset-password/:uidb64/:token" element={<PasswordResetConfirmPage />} />
                     <Route path="/" element={<Login />} />
                 </Route>
                 
-                {/* Protected User routes */}
+                {/* Protected User routes that require login */}
                 <Route element={<UserRoute />}>
                     <Route element={<Layout />}>
                         <Route path="/dashboard" element={<Dashboard />} />
@@ -45,6 +42,7 @@ function App() {
                         <Route path="/add-grievance" element={<AddGrievance />} />
                         <Route path="/inbox" element={<InboxPage />} />
                         <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/change-password" element={<ChangePasswordPage />} />
                     </Route>
                 </Route>
 

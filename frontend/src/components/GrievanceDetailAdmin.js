@@ -9,20 +9,21 @@ const GrievanceDetailAdmin = () => {
     const [comment, setComment] = useState('');
     const [status, setStatus] = useState('');
 
+    const fetchGrievance = async () => {
+        const token = localStorage.getItem('accessToken');
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+        try {
+            const res = await axios.get(`${apiUrl}/api/grievances/${id}/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setGrievance(res.data);
+            setStatus(res.data.status);
+        } catch (error) {
+            console.error("Failed to fetch grievance", error);
+        }
+    };
+
     useEffect(() => {
-        const fetchGrievance = async () => {
-            const token = localStorage.getItem('accessToken');
-            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-            try {
-                const res = await axios.get(`${apiUrl}/api/grievances/${id}/`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                setGrievance(res.data);
-                setStatus(res.data.status);
-            } catch (error) {
-                console.error("Failed to fetch grievance", error);
-            }
-        };
         fetchGrievance();
     }, [id]);
 
@@ -33,9 +34,11 @@ const GrievanceDetailAdmin = () => {
             await axios.patch(`${apiUrl}/api/grievances/${id}/update_status/`, { status }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            alert('Status updated!');
+            alert('Status updated successfully!');
+            fetchGrievance(); // Refresh data to show the new status
         } catch (error) {
             console.error("Failed to update status", error);
+            alert('Failed to update status.');
         }
     };
 
@@ -48,11 +51,10 @@ const GrievanceDetailAdmin = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setComment('');
-            // Refresh data after adding comment
-            const res = await axios.get(`${apiUrl}/api/grievances/${id}/`, { headers: { 'Authorization': `Bearer ${token}` } });
-            setGrievance(res.data);
+            fetchGrievance(); // Refresh data to show the new comment
         } catch (error) {
             console.error("Failed to add comment", error);
+            alert('Failed to post comment.');
         }
     };
 
@@ -68,7 +70,7 @@ const GrievanceDetailAdmin = () => {
             </Paper>
 
             <Paper sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h5" gutterBottom>Conversation History (Internal Comments)</Typography>
+                <Typography variant="h5" gutterBottom>Internal Comments</Typography>
                 <List>
                     {grievance.comments.map((c, index) => (
                         <React.Fragment key={c.id}>

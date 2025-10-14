@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Typography, Paper, Modal, Box, Select, MenuItem, Button, FormControl, InputLabel, IconButton } from '@mui/material';
+import { Container, Typography, Paper, Modal, Box, Select, MenuItem, Button, FormControl, InputLabel, IconButton, TextField } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 
 const style = {
   position: 'absolute',
@@ -21,7 +22,16 @@ const UserManagementPage = () => {
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
     const [newRole, setNewRole] = useState('');
-    const [modalOpen, setModalOpen] = useState(false);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    
+    const [addUserModalOpen, setAddUserModalOpen] = useState(false);
+    const [newUser, setNewUser] = useState({
+        name: '',
+        admission_number: '',
+        college_email: '',
+        role: 'student',
+        password: ''
+    });
 
     const fetchUsers = async () => {
         const token = localStorage.getItem('accessToken');
@@ -42,13 +52,21 @@ const UserManagementPage = () => {
         fetchUsers();
     }, []);
 
-    const handleOpenModal = (user) => {
+    const handleOpenEditModal = (user) => {
         setSelectedUser(user);
         setNewRole(user.role);
-        setModalOpen(true);
+        setEditModalOpen(true);
     };
 
-    const handleCloseModal = () => setModalOpen(false);
+    const handleCloseEditModal = () => setEditModalOpen(false);
+
+    // --- ADD THIS FUNCTION ---
+    const handleAddUserModalClose = () => {
+        setAddUserModalOpen(false);
+        // Reset form when modal is closed
+        setNewUser({ name: '', admission_number: '', college_email: '', role: 'student', password: '' });
+    };
+    // -------------------------
 
     const handleRoleChange = async () => {
         if (!selectedUser) return;
@@ -59,7 +77,7 @@ const UserManagementPage = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             fetchUsers();
-            handleCloseModal();
+            handleCloseEditModal();
         } catch (error) {
             console.error("Failed to change role", error);
         }
@@ -73,9 +91,31 @@ const UserManagementPage = () => {
                 await axios.delete(`${apiUrl}/api/users/${userId}/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                fetchUsers(); // Refresh the list after deletion
+                fetchUsers();
             } catch (error) {
                 console.error("Failed to delete user", error);
+            }
+        }
+    };
+
+    const handleAddUser = async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('accessToken');
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+        try {
+            await axios.post(`${apiUrl}/api/users/`, newUser, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            fetchUsers();
+            handleAddUserModalClose();
+        } catch (error) {
+            console.error("Failed to add user", error);
+            if (error.response && error.response.data) {
+                const errorData = error.response.data;
+                const errorMessages = Object.entries(errorData).map(([key, value]) => `${key}: ${value.join(', ')}`).join('\n');
+                alert(`Failed to add user:\n${errorMessages}`);
+            } else {
+                alert('Failed to add user. An unknown error occurred.');
             }
         }
     };
@@ -89,10 +129,10 @@ const UserManagementPage = () => {
             field: 'actions',
             headerName: 'Actions',
             sortable: false,
-            width: 150,
+            width: 200,
             renderCell: (params) => (
                 <Box>
-                    <Button variant="contained" size="small" onClick={() => handleOpenModal(params.row)} sx={{ mr: 1 }}>
+                    <Button variant="contained" size="small" onClick={() => handleOpenEditModal(params.row)} sx={{ mr: 1 }}>
                         Edit Role
                     </Button>
                     <IconButton color="error" onClick={() => handleDeleteUser(params.row.id)}>
@@ -105,7 +145,12 @@ const UserManagementPage = () => {
 
     return (
         <Container maxWidth="lg">
-            <Typography variant="h4" gutterBottom>User Management</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h4" gutterBottom>User Management</Typography>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserModalOpen(true)}>
+                    Add New User
+                </Button>
+            </Box>
             <Paper sx={{ height: 600, width: '100%' }}>
                 <DataGrid
                     rows={users}
@@ -114,7 +159,9 @@ const UserManagementPage = () => {
                     pageSizeOptions={[10, 25]}
                 />
             </Paper>
-            <Modal open={modalOpen} onClose={handleCloseModal}>
+
+            {/* Modal for Editing Role */}
+            <Modal open={editModalOpen} onClose={handleCloseEditModal}>
                 <Box sx={style}>
                     <Typography variant="h6" component="h2">Change Role for {selectedUser?.name}</Typography>
                     <FormControl fullWidth sx={{ mt: 2 }}>
@@ -128,6 +175,30 @@ const UserManagementPage = () => {
                         </Select>
                     </FormControl>
                     <Button onClick={handleRoleChange} variant="contained" sx={{ mt: 2 }}>Save Changes</Button>
+                </Box>
+            </Modal>
+
+            {/* Modal for Adding a New User */}
+            <Modal open={addUserModalOpen} onClose={handleAddUserModalClose}>
+                <Box sx={style}>
+                    <Typography variant="h6" component="h2">Create a New User</Typography>
+                    <Box component="form" onSubmit={handleAddUser}>
+                        <TextField fullWidth margin="normal" label="Full Name" name="name" onChange={(e) => setNewUser({...newUser, name: e.target.value})} required />
+                        <TextField fullWidth margin="normal" label="Admission / Employee ID" name="admission_number" onChange={(e) => setNewUser({...newUser, admission_number: e.target.value})} required />
+                        <TextField fullWidth margin="normal" label="College Email" name="college_email" type="email" onChange={(e) => setNewUser({...newUser, college_email: e.target.value})} required />
+                        <TextField fullWidth margin="normal" label="Initial Password" name="password" type="password" onChange={(e) => setNewUser({...newUser, password: e.target.value})} required />
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Role</InputLabel>
+                            <Select name="role" value={newUser.role} label="Role" onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
+                                <MenuItem value="student">Student</MenuItem>
+                                <MenuItem value="teacher">Teacher</MenuItem>
+                                <MenuItem value="staff">Non-Teaching Staff</MenuItem>
+                                <MenuItem value="grievance_cell">Grievance Cell</MenuItem>
+                                <MenuItem value="admin">Admin</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <Button type="submit" variant="contained" sx={{ mt: 2 }}>Create User</Button>
+                    </Box>
                 </Box>
             </Modal>
         </Container>

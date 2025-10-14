@@ -44,7 +44,6 @@ const Login = () => {
                 });
                 const user = userDetailsResponse.data;
 
-                // Save all necessary items to localStorage
                 localStorage.setItem('user', JSON.stringify(user));
                 localStorage.setItem('userRole', user.role);
                 localStorage.setItem('userName', user.name);
@@ -78,7 +77,7 @@ const Login = () => {
                                 required
                                 fullWidth
                                 id="admission_number"
-                                label="Admission Number"
+                                label="Admission Number / ID"
                                 name="admission_number"
                                 autoComplete="username"
                                 autoFocus
@@ -100,14 +99,14 @@ const Login = () => {
                             
                             {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
                             
-                            <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.5 }}>
+                            <Button
+                                type="submit"
+                                fullWidth
+                                variant="contained"
+                                sx={{ mt: 3, mb: 2, py: 1.5 }}
+                            >
                                 Sign In
                             </Button>
-                            <Typography variant="body2" align="center" sx={{ mb: 1 }}>
-                                <Link to="/register" style={{ textDecoration: 'none' }}>
-                                    {"Don't have an account? Register"}
-                                </Link>
-                            </Typography>
                             <Typography variant="body2" align="center">
                                 <Link to="/request-password-reset" style={{ textDecoration: 'none' }}>
                                     Forgot Password?

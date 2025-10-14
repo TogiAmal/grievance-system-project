@@ -9,8 +9,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
         
-        self.grievance_id = self.scope['url_route']['kwargs']['grievance_id']
-        self.room_group_name = f'chat_{self.grievance_id}'
+        self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
+        self.room_group_name = f'chat_{self.conversation_id}'
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
@@ -29,8 +29,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'chat_message',
                 'message': message,
-                'user_id': self.user.id,
-                'username': self.user.name
+                'user': {'id': self.user.id, 'name': self.user.name}
             }
         )
 
@@ -39,10 +38,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def save_message(self, message):
-        from .models import Grievance, ChatMessage
-        grievance = Grievance.objects.get(id=self.grievance_id)
-        ChatMessage.objects.create(user=self.user, grievance=grievance, message=message)
-
+        from .models import Conversation, ChatMessage
+        conversation = Conversation.objects.get(id=self.conversation_id)
+        ChatMessage.objects.create(user=self.user, conversation=conversation, message=message)
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -52,15 +50,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             return
 
         self.room_group_name = f'notifications_{self.user.id}'
-        print(f"--- NOTIFICATION CONSUMER: User '{self.user.name}' CONNECTED to group '{self.room_group_name}' ---")
-
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
-    # This function is called when a notification is sent from the signal
     async def send_notification(self, event):
-        print(f"--- NOTIFICATION CONSUMER: RECEIVED message in group '{self.room_group_name}' ---")
         await self.send(text_data=json.dumps(event))

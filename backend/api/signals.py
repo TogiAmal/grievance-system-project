@@ -6,31 +6,53 @@ from asgiref.sync import async_to_sync
 from .models import ChatMessage, CustomUser
 
 @receiver(post_save, sender=ChatMessage)
-def send_notification_on_new_message(sender, instance, created, **kwargs):
+def send_chat_notification(sender, instance, created, **kwargs):
     if created:
-        print("--- NEW CHAT MESSAGE SIGNAL FIRED ---")
         channel_layer = get_channel_layer()
-        grievance = instance.grievance
         sender_user = instance.user
+        conversation = instance.conversation
         
         recipients = []
         
         if sender_user.role in ['admin', 'grievance_cell']:
-            recipients.append(grievance.submitted_by)
+            # If an admin sends, notify the user who owns the conversation
+            recipients.append(conversation.user)
         else:
+            # If a user sends, notify all admins
             recipients.extend(
                 CustomUser.objects.filter(role__in=['admin', 'grievance_cell'])
             )
 
         for recipient in recipients:
-            if recipient and recipient.is_active:
+            if recipient and recipient.is_active and recipient.id != sender_user.id:
                 transaction.on_commit(
                     lambda: async_to_sync(channel_layer.group_send)(
                         f'notifications_{recipient.id}',
                         {
-                            # CORRECTED TYPE: Remove the dot
                             'type': 'send_notification',
-                            'message': f'You have a new message regarding grievance #{grievance.id}'
+                            'message': f'New message from {sender_user.name}',
+                            'sender_name': sender_user.name
                         }
                     )
                 )
+
+@receiver(post_save, sender=CustomUser)
+def send_profile_update_notification(sender, instance, created, **kwargs):
+    if not created:
+        channel_layer = get_channel_layer()
+        user = instance
+        image_url = user.profile_image.url if user.profile_image else None
+        
+        transaction.on_commit(
+            lambda: async_to_sync(channel_layer.group_send)(
+                f'notifications_{user.id}',
+                {
+                    'type': 'profile_updated',
+                    'user': {
+                        'id': user.id,
+                        'name': user.name,
+                        'profile_image': image_url
+                    }
+                }
+            )
+        )

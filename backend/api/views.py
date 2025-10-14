@@ -1,3 +1,4 @@
+# api/views.py
 from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
@@ -7,74 +8,24 @@ from django.utils.encoding import force_bytes
 from rest_framework import viewsets, generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import CustomUser, Grievance, GrievanceComment
+from .models import CustomUser, Grievance, GrievanceComment, Conversation
 from .permissions import IsAdminOrGrievanceCell, IsOwner
 from .serializers import (
-    UserRegistrationSerializer,
     GrievanceSerializer,
     GrievanceCommentSerializer,
     MyTokenObtainPairSerializer,
     GrievanceStatusSerializer,
-    UserSerializer
+    UserSerializer,
+    AdminUserCreateSerializer,
+    ChangePasswordSerializer,
+    ConversationSerializer  # This import was missing
 )
 
-# ----------------------------
-# User Registration and Verification
-# ----------------------------
-class UserRegistrationView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
-    serializer_class = UserRegistrationSerializer
-    permission_classes = [permissions.AllowAny]
+# NOTE: UserRegistrationView and VerifyEmailAPI have been removed as public registration is disabled.
 
-    def perform_create(self, serializer):
-        user = serializer.save()
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
-        if settings.DEBUG:
-            frontend_url = 'http://localhost:3000'
-        else:
-            frontend_url = 'https://grievance-frontend-3fmk.onrender.com'
-        
-        verification_link = f"{frontend_url}/verify-email/{uid}/{token}"
-
-        subject = "Activate Your Grievance System Account"
-        message = f"Hi {user.name},\n\nThank you for registering. Please click the link below to activate your account:\n{verification_link}"
-        
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[user.college_email],
-            fail_silently=False,
-        )
-
-class VerifyEmailAPI(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request, uidb64, token):
-        try:
-            uid = urlsafe_base64_decode(uidb64).decode()
-            user = CustomUser.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
-            user = None
-
-        if user is not None and default_token_generator.check_token(user, token):
-            if user.is_active:
-                return Response({"message": "Account already activated."}, status=status.HTTP_200_OK)
-            user.is_active = True
-            user.save()
-            return Response({"message": "Email verified successfully. You can now log in."}, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "Invalid activation link."}, status=status.HTTP_400_BAD_REQUEST)
-
-
-# ----------------------------
-# Grievance Management
-# ----------------------------
 class GrievanceViewSet(viewsets.ModelViewSet):
     serializer_class = GrievanceSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
@@ -86,7 +37,33 @@ class GrievanceViewSet(viewsets.ModelViewSet):
         return Grievance.objects.filter(submitted_by=user).order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save(submitted_by=self.request.user)
+        title = serializer.validated_data.get('title', '').lower()
+        priority = 'LOW'
+        high_priority_keywords = ['urgent', 'emergency', 'harassment', 'threat', 'safety']
+        if any(keyword in title for keyword in high_priority_keywords):
+            priority = 'HIGH'
+        
+        grievance = serializer.save(submitted_by=self.request.user, priority=priority)
+
+        subject = f"Grievance Submitted - Your Token ID is #{grievance.id}"
+        message = f"""
+        Hi {self.request.user.name},
+
+        Thank you for submitting your grievance. 
+        Your unique token ID is: {grievance.id}
+
+        You can use this ID to track the status of your grievance on the portal.
+
+        Title: {grievance.title}
+        Priority Assigned: {grievance.priority}
+        """
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[self.request.user.college_email],
+            fail_silently=False,
+        )
 
     @action(detail=False, methods=['get'], permission_classes=[IsAdminOrGrievanceCell])
     def stats(self, request):
@@ -116,58 +93,23 @@ class GrievanceViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=True, methods=['post'], permission_classes=[IsOwner])
-    def request_chat(self, request, pk=None):
-        grievance = self.get_object()
-        grievance.chat_status = 'REQUESTED'
-        grievance.save()
-        return Response({'status': 'chat requested'})
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminOrGrievanceCell])
-    def respond_to_chat(self, request, pk=None):
-        grievance = self.get_object()
-        response = request.data.get('response')
-        if response in ['ACCEPTED', 'DECLINED']:
-            grievance.chat_status = response
-            grievance.save()
-            return Response({'status': f'chat {response.lower()}'})
-        return Response({'error': 'Invalid response'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-# ----------------------------
-# Authentication
-# ----------------------------
-class MyTokenObtainPairView(TokenObtainPairView):
-    serializer_class = MyTokenObtainPairSerializer
-
-
-# ----------------------------
-# Health Check
-# ----------------------------
-class HealthCheckAPI(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request):
-        return Response({"status": "ok", "message": "Backend is running."})
-
-
-# ----------------------------
-# User Management (Admin + Normal)
-# ----------------------------
 class UserViewSet(viewsets.ModelViewSet):
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    queryset = CustomUser.objects.all().order_by('username')
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return AdminUserCreateSerializer
+        return UserSerializer
 
-    def get_queryset(self):
-        user = self.request.user
-        # Admins or grievance cell can view all users
-        if user.role in ['admin', 'grievance_cell']:
-            return CustomUser.objects.all().order_by('username')
-        # Regular users can view only themselves
-        return CustomUser.objects.filter(id=user.id)
+    def get_permissions(self):
+        if self.action in ['list', 'create', 'destroy', 'change_role']:
+            self.permission_classes = [IsAdminOrGrievanceCell]
+        else:
+            self.permission_classes = [permissions.IsAuthenticated]
+        return super().get_permissions()
 
-    @action(detail=True, methods=['patch'], permission_classes=[IsAdminOrGrievanceCell])
+    @action(detail=True, methods=['patch'])
     def change_role(self, request, pk=None):
         user = self.get_object()
         new_role = request.data.get('role')
@@ -178,23 +120,28 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(user)
         return Response(serializer.data)
 
+class ConversationViewSet(viewsets.ModelViewSet):
+    serializer_class = ConversationSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-# ----------------------------
-# Current User Profile
-# ----------------------------
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def current_user(request):
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data)
+    def get_queryset(self):
+        user = self.request.user
+        if user.role in ['admin', 'grievance_cell']:
+            return Conversation.objects.all().order_by('-created_at')
+        # Create a conversation for the user if it doesn't exist
+        Conversation.objects.get_or_create(user=user)
+        return Conversation.objects.filter(user=user)
 
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
-# ----------------------------
-# Password Reset
-# ----------------------------
+class HealthCheckAPI(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        return Response({"status": "ok", "message": "Backend is running."})
+
 class RequestPasswordResetAPI(APIView):
     permission_classes = [permissions.AllowAny]
-
     def post(self, request):
         email = request.data.get('email')
         try:
@@ -217,10 +164,8 @@ class RequestPasswordResetAPI(APIView):
             pass
         return Response({'message': 'If an account with that email exists, a password reset link has been sent.'}, status=status.HTTP_200_OK)
 
-
 class PasswordResetConfirmAPI(APIView):
     permission_classes = [permissions.AllowAny]
-
     def post(self, request, uidb64, token):
         try:
             uid = force_bytes(urlsafe_base64_decode(uidb64))
@@ -230,9 +175,28 @@ class PasswordResetConfirmAPI(APIView):
         if user is not None and default_token_generator.check_token(user, token):
             password = request.data.get('password')
             if len(password) < 8:
-                return Response({'error': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+                 return Response({'error': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
             user.set_password(password)
             user.save()
             return Response({'message': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'The reset link is invalid or has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+class ChangePasswordView(generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    model = CustomUser
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            if not self.object.check_password(serializer.data.get("old_password")):
+                return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
+            self.object.set_password(serializer.data.get("new_password"))
+            self.object.save()
+            return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

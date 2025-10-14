@@ -1,4 +1,3 @@
-# api/apps.py
 from django.apps import AppConfig
 
 class ApiConfig(AppConfig):
@@ -7,11 +6,12 @@ class ApiConfig(AppConfig):
 
     def ready(self):
         from django.db.models.signals import post_save
-        # Import the model and the function
-        from .models import ChatMessage
-        from .signals import send_notification_on_new_message
+        # Import only the models and signal functions that still exist
+        from .models import ChatMessage, CustomUser
+        from .signals import send_chat_notification, send_profile_update_notification
         
         print("--- ApiConfig.ready() IS RUNNING ---")
         
-        # Manually connect the signal
-        post_save.connect(send_notification_on_new_message, sender=ChatMessage)
+        # Connect the two active signals
+        post_save.connect(send_chat_notification, sender=ChatMessage)
+        post_save.connect(send_profile_update_notification, sender=CustomUser)
