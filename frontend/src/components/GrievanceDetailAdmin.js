@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // <-- 1. IMPORT useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Typography, Paper, Box, TextField, Button, Select, MenuItem, FormControl, InputLabel, List, ListItem, ListItemText, Divider } from '@mui/material';
@@ -10,7 +10,6 @@ const GrievanceDetailAdmin = () => {
     const [status, setStatus] = useState('');
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-    // 2. WRAP fetchGrievance in useCallback
     const fetchGrievance = useCallback(async () => {
         const token = localStorage.getItem('accessToken');
         try {
@@ -22,12 +21,11 @@ const GrievanceDetailAdmin = () => {
         } catch (error) {
             console.error("Failed to fetch grievance", error);
         }
-    }, [id, apiUrl]); // 3. ADD 'id' and 'apiUrl' as dependencies
+    }, [id, apiUrl]); 
 
-    // This hook runs the fetch function when the page loads
     useEffect(() => {
         fetchGrievance();
-    }, [fetchGrievance]); // 4. ADD `fetchGrievance` to the dependency array
+    }, [fetchGrievance]); 
 
     const handleUpdateStatus = async () => {
         const token = localStorage.getItem('accessToken');
@@ -36,7 +34,7 @@ const GrievanceDetailAdmin = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             alert('Status updated successfully!');
-            fetchGrievance(); // Refresh data
+            fetchGrievance(); 
         } catch (error) {
             console.error("Failed to update status", error);
             alert('Failed to update status.');
@@ -51,7 +49,7 @@ const GrievanceDetailAdmin = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setComment('');
-            fetchGrievance(); // Refresh data
+            fetchGrievance(); 
         } catch (error) {
             console.error("Failed to add comment", error);
             alert('Failed to post comment.');
@@ -69,7 +67,7 @@ const GrievanceDetailAdmin = () => {
                 <Typography variant="body1" sx={{ mb: 2 }}><strong>Priority:</strong> {grievance.priority}</Typography>
                 <Typography variant="body2" sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>{grievance.description}</Typography>
                 
-                {/* --- THIS IS THE "DOWNLOAD" BUTTON --- */}
+                {/* --- THIS IS THE FIXED "DOWNLOAD" BUTTON --- */}
                 {grievance.evidence_image && (
                     <Box mt={2}>
                         <Typography variant="subtitle1" gutterBottom>Attached Evidence:</Typography>
