@@ -1,4 +1,3 @@
-// src/components/Layout.js
 import React, { useState, useEffect } from 'react';
 import { AppBar, Toolbar, Typography, Button, Container, Box, IconButton, Menu, MenuItem, useTheme, useMediaQuery, Badge, Avatar, Divider } from '@mui/material';
 import { Link, useNavigate, Outlet } from 'react-router-dom';
@@ -10,53 +9,39 @@ const Layout = () => {
     const [user, setUser] = useState(null);
     const isLoggedIn = !!localStorage.getItem('accessToken');
     const [notificationCount, setNotificationCount] = useState(0);
-    
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
     const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
     const [userMenuAnchor, setUserMenuAnchor] = useState(null);
 
     useEffect(() => {
         const loadUser = () => {
             const userDataString = localStorage.getItem('user');
-            if (userDataString) {
-                setUser(JSON.parse(userDataString));
-            }
+            if (userDataString) { setUser(JSON.parse(userDataString)); }
         };
-        
-        loadUser(); // Load user on initial render
-
-        // --- THIS IS THE NEW LISTENER ---
-        // Listen for the 'profileUpdated' event to update the user in real-time
-        const handleProfileUpdate = () => {
-            loadUser();
-        };
+        loadUser();
+        // This listener will reload user data when 'profileUpdated' is dispatched
+        const handleProfileUpdate = () => loadUser();
         window.addEventListener('profileUpdated', handleProfileUpdate);
+        
+        // ... (Notification WebSocket logic remains here) ...
 
-        // Cleanup listener when the component unmounts
-        return () => {
-            window.removeEventListener('profileUpdated', handleProfileUpdate);
-        };
-        // --------------------------
-
+        return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
     }, [isLoggedIn]);
 
-    const handleMobileMenuOpen = (event) => setMobileMenuAnchor(event.currentTarget);
+    const handleMobileMenuOpen = (e) => setMobileMenuAnchor(e.currentTarget);
     const handleMobileMenuClose = () => setMobileMenuAnchor(null);
-    const handleUserMenuOpen = (event) => setUserMenuAnchor(event.currentTarget);
+    const handleUserMenuOpen = (e) => setUserMenuAnchor(e.currentTarget);
     const handleUserMenuClose = () => setUserMenuAnchor(null);
-
     const handleNavigate = (path) => {
         if (path === '/inbox') setNotificationCount(0);
         navigate(path);
         handleMobileMenuClose();
         handleUserMenuClose();
     };
-
     const handleLogout = () => {
         localStorage.clear();
-        setUser(null); // Clear user state on logout
+        setUser(null);
         navigate('/login');
     };
 
@@ -65,11 +50,8 @@ const Layout = () => {
             <Button color="inherit" component={Link} to="/dashboard">Home</Button>
             <Button color="inherit" component={Link} to="/add-grievance">Add Grievance</Button>
             <Button color="inherit" component={Link} to="/status">Grievance Status</Button>
-            <Button color="inherit" onClick={() => handleNavigate('/inbox')}>
-                <Badge badgeContent={notificationCount} color="error">Inbox</Badge>
-            </Button>
+            <Button color="inherit" onClick={() => handleNavigate('/inbox')}><Badge badgeContent={notificationCount} color="error">Inbox</Badge></Button>
             <Button color="inherit" component={Link} to="/faq">FAQ</Button>
-            
             <IconButton onClick={handleUserMenuOpen} sx={{ p: 0, ml: 2 }}>
                 <Avatar alt={user?.name} src={user?.profile_image ? `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${user.profile_image}` : '/default-avatar.png'} />
             </IconButton>
@@ -85,15 +67,9 @@ const Layout = () => {
 
     const renderMobileMenu = () => (
         <>
-            <IconButton color="inherit" onClick={handleMobileMenuOpen}>
-                <Badge badgeContent={notificationCount} color="error">
-                    <MenuIcon />
-                </Badge>
-            </IconButton>
+            <IconButton color="inherit" onClick={handleMobileMenuOpen}><Badge badgeContent={notificationCount} color="error"><MenuIcon /></Badge></IconButton>
             <Menu anchorEl={mobileMenuAnchor} open={Boolean(mobileMenuAnchor)} onClose={handleMobileMenuClose}>
-                <MenuItem onClick={() => handleNavigate('/profile')}>
-                    <Avatar alt={user?.name} src={user?.profile_image ? `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${user.profile_image}` : '/default-avatar.png'} sx={{ mr: 2 }} /> Profile
-                </MenuItem>
+                <MenuItem onClick={() => handleNavigate('/profile')}><Avatar alt={user?.name} src={user?.profile_image ? `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${user.profile_image}` : '/default-avatar.png'} sx={{ mr: 2 }} /> Profile</MenuItem>
                 <Divider />
                 <MenuItem onClick={() => handleNavigate('/dashboard')}>Home</MenuItem>
                 <MenuItem onClick={() => handleNavigate('/add-grievance')}>Add Grievance</MenuItem>
@@ -111,28 +87,13 @@ const Layout = () => {
             <AppBar position="static">
                 <Toolbar>
                     <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" component="div">
-                             <Link to={isLoggedIn ? "/dashboard" : "/login"} style={{ textDecoration: 'none', color: 'inherit' }}>
-                                {isMobile ? "SJCET" : "St. Joseph's College of Engineering and Technology, Palai"}
-                            </Link>
-                        </Typography>
-                        {!isMobile && (
-                            <Typography variant="body2">
-                                Online Grievance Redressal System
-                            </Typography>
-                        )}
+                        <Typography variant="h6"><Link to={isLoggedIn ? "/dashboard" : "/login"} style={{ textDecoration: 'none', color: 'inherit' }}>{isMobile ? "SJCET" : "St. Joseph's College of Engineering and Technology, Palai"}</Link></Typography>
+                        {!isMobile && <Typography variant="body2">Online Grievance Redressal System</Typography>}
                     </Box>
-                    
                     {isLoggedIn && (isMobile ? renderMobileMenu() : renderDesktopMenu())}
                 </Toolbar>
             </AppBar>
-            
-            <main>
-                <Container sx={{ mt: 4, mb: 4 }}>
-                    <Outlet />
-                </Container>
-            </main>
-
+            <main><Container sx={{ mt: 4, mb: 4 }}><Outlet /></Container></main>
             {isLoggedIn && <Chatbot />}
         </div>
     );

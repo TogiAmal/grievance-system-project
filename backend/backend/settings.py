@@ -1,25 +1,19 @@
-# backend/settings.py
-from dotenv import load_dotenv
-load_dotenv()
 from pathlib import Path
 import os
 import dj_database_url
-from dotenv import load_dotenv # Import this
+from dotenv import load_dotenv
 
-# This line loads variables from your .env file
 load_dotenv()
 
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-n7yg&)%m6^3zq^=(v+r(kpkunort82x!=%z%h&f2235^j(h9vx')
-
-# This will now be True locally (from .env) and False on Render
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
-    'yourusername.pythonanywhere.com'
 ]
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
@@ -27,7 +21,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 
 # Application definition
 INSTALLED_APPS = [
-     'channels', # Add this at the top
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -54,11 +48,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'backend.urls'
 
-# UPDATED TEMPLATES SECTION
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # This is now conditional. It only looks for React's files in DEBUG mode.
         'DIRS': [os.path.join(BASE_DIR, '..', 'frontend', 'build')] if DEBUG else [],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -72,6 +64,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'backend.wsgi.application'
+ASGI_APPLICATION = 'backend.asgi.application'
 
 # Database Configuration
 DATABASES = {
@@ -82,9 +75,22 @@ DATABASES = {
     )
 }
 
+# Channel Layers (for chat)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    # ... (validators remain the same) ...
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -92,7 +98,6 @@ CORS_ALLOWED_ORIGINS = [
     "https://grievance-frontend-3fmk.onrender.com",
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
@@ -103,7 +108,12 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# CORRECTED EMAIL CONFIGURATION
+# --- THIS IS THE MISSING CONFIGURATION FOR IMAGE UPLOADS ---
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# -----------------------------------------------------------
+
+# Email Configuration
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
@@ -114,7 +124,6 @@ else:
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'api.CustomUser'
 
@@ -123,11 +132,3 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
-ASGI_APPLICATION = 'backend.asgi.application'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

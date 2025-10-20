@@ -9,6 +9,7 @@ const GrievanceDetailAdmin = () => {
     const [comment, setComment] = useState('');
     const [status, setStatus] = useState('');
 
+    // This function fetches the grievance data
     const fetchGrievance = async () => {
         const token = localStorage.getItem('accessToken');
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -23,6 +24,7 @@ const GrievanceDetailAdmin = () => {
         }
     };
 
+    // This hook runs the fetch function when the page loads
     useEffect(() => {
         fetchGrievance();
     }, [id]);
@@ -35,7 +37,7 @@ const GrievanceDetailAdmin = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             alert('Status updated successfully!');
-            fetchGrievance(); // Refresh data to show the new status
+            fetchGrievance(); // Refresh data
         } catch (error) {
             console.error("Failed to update status", error);
             alert('Failed to update status.');
@@ -51,7 +53,7 @@ const GrievanceDetailAdmin = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setComment('');
-            fetchGrievance(); // Refresh data to show the new comment
+            fetchGrievance(); // Refresh data
         } catch (error) {
             console.error("Failed to add comment", error);
             alert('Failed to post comment.');
@@ -65,8 +67,25 @@ const GrievanceDetailAdmin = () => {
             <Paper sx={{ p: 3, mb: 3 }}>
                 <Typography variant="h4" gutterBottom>{grievance.title}</Typography>
                 <Typography variant="body1"><strong>Submitted by:</strong> {grievance.submitted_by.name}</Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}><strong>Current Status:</strong> {grievance.status}</Typography>
+                <Typography variant="body1"><strong>Current Status:</strong> {grievance.status}</Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}><strong>Priority:</strong> {grievance.priority}</Typography>
                 <Typography variant="body2" sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>{grievance.description}</Typography>
+                
+                {/* --- THIS IS THE SECTION TO DISPLAY THE EVIDENCE --- */}
+                {grievance.evidence_image && (
+                    <Box mt={2}>
+                        <Typography variant="subtitle1" gutterBottom>Attached Evidence:</Typography>
+                        <Button 
+                            variant="outlined" 
+                            href={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${grievance.evidence_image}`} 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            View Attached File
+                        </Button>
+                    </Box>
+                )}
+                {/* ------------------------------------------------- */}
             </Paper>
 
             <Paper sx={{ p: 3, mb: 3 }}>

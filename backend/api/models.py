@@ -33,7 +33,6 @@ class Grievance(models.Model):
         ('MEDIUM', 'Medium'),
         ('LOW', 'Low'),
     ]
-
     submitted_by = models.ForeignKey('api.CustomUser', on_delete=models.CASCADE, related_name='submitted_grievances')
     assigned_to = models.ForeignKey('api.CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_grievances', limit_choices_to={'role__in': ['admin', 'grievance_cell']})
     title = models.CharField(max_length=200)
@@ -52,7 +51,6 @@ class Conversation(models.Model):
         return f"Conversation with {self.user.name}"
 
 class ChatMessage(models.Model):
-    # Allow this field to be null just for the migration
     conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE, null=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     message = models.TextField()
@@ -66,6 +64,6 @@ class GrievanceComment(models.Model):
     user = models.ForeignKey('api.CustomUser', on_delete=models.CASCADE)
     comment_text = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
-    evidence_file = models.FileField(upload_to='grievance_evidence/', null=True, blank=True)
+
     def __str__(self):
         return f'Comment by {self.user.username} on {self.grievance.title}'

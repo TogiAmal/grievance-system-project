@@ -1,4 +1,3 @@
-# api/serializers.py
 from rest_framework import serializers
 from .models import CustomUser, Grievance, GrievanceComment, ChatMessage, Conversation
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -19,7 +18,6 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
-
     def validate_new_password(self, value):
         if len(value) < 8:
             raise serializers.ValidationError("Password must be at least 8 characters long.")
@@ -29,6 +27,13 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'name', 'role', 'profile_image')
+
+# --- THIS SERIALIZER WAS MISSING ---
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ('profile_image',)
+# -----------------------------------
 
 class GrievanceCommentSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
@@ -54,16 +59,15 @@ class GrievanceSerializer(serializers.ModelSerializer):
     submitted_by = UserSerializer(read_only=True)
     assigned_to = UserSerializer(read_only=True)
     comments = GrievanceCommentSerializer(many=True, read_only=True)
-    # This field was declared but not included in 'fields' below
-    chat_messages = ChatMessageSerializer(many=True, read_only=True)
-
+    # chat_messages is removed, as it's now part of ConversationSerializer
+    
     class Meta:
         model = Grievance
-        # CORRECTED: 'chat_messages' has been added to the fields tuple
+        # 'chat_status' and 'chat_messages' are removed to match your models.py
         fields = (
             'id', 'title', 'description', 'status', 'priority', 
             'created_at', 'updated_at', 'submitted_by', 'assigned_to', 
-            'comments', 'chat_messages', 'evidence_image'
+            'comments', 'evidence_image'
         )
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):

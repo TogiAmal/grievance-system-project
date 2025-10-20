@@ -1,14 +1,12 @@
-# api/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-
 from .views import (
     GrievanceViewSet,
     HealthCheckAPI,
     MyTokenObtainPairView,
     UserViewSet,
-    ConversationViewSet, # <-- Import this
+    ConversationViewSet,
     RequestPasswordResetAPI,
     PasswordResetConfirmAPI,
     ChangePasswordView
@@ -17,7 +15,7 @@ from .views import (
 router = DefaultRouter()
 router.register(r'grievances', GrievanceViewSet, basename='grievance')
 router.register(r'users', UserViewSet, basename='user')
-router.register(r'conversations', ConversationViewSet, basename='conversation') # <-- Add this line
+router.register(r'conversations', ConversationViewSet, basename='conversation')
 
 urlpatterns = [
     path('', include(router.urls)),

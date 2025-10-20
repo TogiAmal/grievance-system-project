@@ -1,4 +1,3 @@
-# backend/urls.py
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -9,7 +8,7 @@ urlpatterns = [
     path('api/', include('api.urls')),
 ]
 
-# This line tells Django to serve your uploaded media files (like profile pictures)
-# only when you are in local development (DEBUG=True).
+# --- THIS IS THE MISSING URL PATTERN ---
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# ---------------------------------------

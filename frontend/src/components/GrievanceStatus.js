@@ -11,11 +11,6 @@ const GrievanceStatus = () => {
     useEffect(() => {
         const fetchGrievances = async () => {
             const token = localStorage.getItem('accessToken');
-            if (!token) {
-                setError('You must be logged in to view your grievances.');
-                setLoading(false);
-                return;
-            }
             const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             try {
                 const response = await axios.get(`${apiUrl}/api/grievances/`, {
@@ -47,13 +42,14 @@ const GrievanceStatus = () => {
                     <Typography variant="body1" sx={{ mb: 2 }}><strong>Priority:</strong> {selectedGrievance.priority}</Typography>
                     <Typography variant="body2" sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>{selectedGrievance.description}</Typography>
                     
-                    {/* Section to display evidence file */}
-                    {selectedGrievance.evidence_file && (
+                    {/* --- CORRECTED SECTION --- */}
+                    {selectedGrievance.evidence_image && (
                         <Box mt={2}>
                             <Typography variant="subtitle1" gutterBottom>Evidence File:</Typography>
                             <Button 
                                 variant="outlined" 
-                                href={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${selectedGrievance.evidence_file}`} 
+                                // Corrected field name from evidence_file to evidence_image
+                                href={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${selectedGrievance.evidence_image}`} 
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >

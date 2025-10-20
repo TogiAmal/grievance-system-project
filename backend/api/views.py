@@ -1,4 +1,3 @@
-# api/views.py
 from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
@@ -21,10 +20,9 @@ from .serializers import (
     UserSerializer,
     AdminUserCreateSerializer,
     ChangePasswordSerializer,
-    ConversationSerializer  # This import was missing
+    ConversationSerializer,
+    UserProfileUpdateSerializer
 )
-
-# NOTE: UserRegistrationView and VerifyEmailAPI have been removed as public registration is disabled.
 
 class GrievanceViewSet(viewsets.ModelViewSet):
     serializer_class = GrievanceSerializer
@@ -46,25 +44,12 @@ class GrievanceViewSet(viewsets.ModelViewSet):
         grievance = serializer.save(submitted_by=self.request.user, priority=priority)
 
         subject = f"Grievance Submitted - Your Token ID is #{grievance.id}"
-        message = f"""
-        Hi {self.request.user.name},
-
-        Thank you for submitting your grievance. 
-        Your unique token ID is: {grievance.id}
-
-        You can use this ID to track the status of your grievance on the portal.
-
-        Title: {grievance.title}
-        Priority Assigned: {grievance.priority}
-        """
+        message = f"Hi {self.request.user.name},\n\nThank you for submitting your grievance..."
         send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[self.request.user.college_email],
-            fail_silently=False,
+            subject=subject, message=message, from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[self.request.user.college_email], fail_silently=False
         )
-
+    
     @action(detail=False, methods=['get'], permission_classes=[IsAdminOrGrievanceCell])
     def stats(self, request):
         total = Grievance.objects.count()
@@ -100,6 +85,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return AdminUserCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return UserProfileUpdateSerializer
         return UserSerializer
 
     def get_permissions(self):
@@ -128,7 +115,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role in ['admin', 'grievance_cell']:
             return Conversation.objects.all().order_by('-created_at')
-        # Create a conversation for the user if it doesn't exist
         Conversation.objects.get_or_create(user=user)
         return Conversation.objects.filter(user=user)
 
@@ -156,9 +142,7 @@ class RequestPasswordResetAPI(APIView):
             send_mail(
                 'Password Reset Request',
                 f'Hi {user.name},\n\nPlease click the link to reset your password:\n{reset_link}',
-                settings.EMAIL_HOST_USER,
-                [user.college_email],
-                fail_silently=False
+                settings.EMAIL_HOST_USER, [user.college_email], fail_silently=False
             )
         except CustomUser.DoesNotExist:
             pass

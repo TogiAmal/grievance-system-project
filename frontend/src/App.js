@@ -1,7 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-
-// Import all components
 import Login from './components/Login';
 import GrievanceStatus from './components/GrievanceStatus';
 import Dashboard from './components/Dashboard';
@@ -25,15 +23,12 @@ function App() {
     return (
         <Router>
             <Routes>
-                {/* Public routes visible to everyone */}
                 <Route element={<Layout />}>
                     <Route path="/login" element={<Login />} />
                     <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
                     <Route path="/reset-password/:uidb64/:token" element={<PasswordResetConfirmPage />} />
                     <Route path="/" element={<Login />} />
                 </Route>
-                
-                {/* Protected User routes that require login */}
                 <Route element={<UserRoute />}>
                     <Route element={<Layout />}>
                         <Route path="/dashboard" element={<Dashboard />} />
@@ -45,8 +40,6 @@ function App() {
                         <Route path="/change-password" element={<ChangePasswordPage />} />
                     </Route>
                 </Route>
-
-                {/* Protected Admin routes */}
                 <Route element={<AdminRoute />}>
                     <Route element={<AdminLayout />}>
                         <Route path="/admin/dashboard" element={<AdminDashboard />} />

@@ -1,4 +1,3 @@
-// src/components/ProfilePage.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Button, Container, Typography, Box, Paper, Alert } from '@mui/material';
@@ -17,11 +16,7 @@ const ProfilePage = () => {
         e.preventDefault();
         setMessage('');
         setError('');
-
-        if (!profileImage) {
-            setError('Please select an image to upload.');
-            return;
-        }
+        if (!profileImage) { setError('Please select an image to upload.'); return; }
 
         const token = localStorage.getItem('accessToken');
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -29,26 +24,16 @@ const ProfilePage = () => {
         formData.append('profile_image', profileImage);
 
         try {
-            // 1. Upload the new image and get the updated user data in the response
             const response = await axios.patch(`${apiUrl}/api/users/${user.id}/`, formData, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
             });
-
-            // 2. Update the user object in localStorage with the new data
+            // Update localStorage with the new user data
             localStorage.setItem('user', JSON.stringify(response.data));
-            
-            // 3. Dispatch a custom event to notify the layout to update
+            // Send an event to tell the layout to refresh
             window.dispatchEvent(new CustomEvent('profileUpdated'));
-
             setMessage('Profile image updated successfully!');
-            setProfileImage(null); // Clear the file input
-        } catch (err) {
-            setError('Failed to update profile image. Please try again.');
-            console.error(err);
-        }
+            setProfileImage(null);
+        } catch (err) { setError('Failed to update profile image. Please try again.'); }
     };
 
     return (
@@ -61,10 +46,8 @@ const ProfilePage = () => {
                         <input type="file" hidden accept="image/*" onChange={handleImageChange} />
                     </Button>
                     {profileImage && <Typography sx={{ mt: 1, display: 'inline', ml: 2, color: 'text.secondary' }}>{profileImage.name}</Typography>}
-                    
                     {message && <Alert severity="success" sx={{ mt: 2 }}>{message}</Alert>}
                     {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-
                     <Button type="submit" variant="contained" sx={{ mt: 2, display: 'block' }}>Save Changes</Button>
                 </Box>
             </Paper>
