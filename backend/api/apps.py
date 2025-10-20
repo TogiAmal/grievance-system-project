@@ -6,7 +6,7 @@ class ApiConfig(AppConfig):
 
     def ready(self):
         from django.db.models.signals import post_save
-        from .models import ChatMessage, Grievance, CustomUser
+        from .models import ChatMessage, CustomUser, Grievance
         from .signals import (
             send_chat_notification, 
             send_profile_update_notification, 

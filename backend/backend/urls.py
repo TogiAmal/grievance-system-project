@@ -8,7 +8,7 @@ urlpatterns = [
     path('api/', include('api.urls')),
 ]
 
-# --- THIS IS THE MISSING URL PATTERN ---
+# --- THIS IS THE SECOND PART OF THE FIX FOR BROKEN IMAGES ---
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-# ---------------------------------------
+# -----------------------------------------------------------

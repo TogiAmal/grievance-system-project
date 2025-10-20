@@ -20,11 +20,34 @@ const Layout = () => {
             if (userDataString) { setUser(JSON.parse(userDataString)); }
         };
         loadUser();
+
         // This listener will reload user data when 'profileUpdated' is dispatched
         const handleProfileUpdate = () => loadUser();
         window.addEventListener('profileUpdated', handleProfileUpdate);
         
-        // ... (Notification WebSocket logic remains here) ...
+        if (isLoggedIn) {
+            const token = localStorage.getItem('accessToken');
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const wsHost = process.env.REACT_APP_API_URL ? new URL(process.env.REACT_APP_API_URL).host : 'localhost:8000';
+            const wsUrl = `${protocol}://${wsHost}/ws/notifications/?token=${token}`;
+            const notificationSocket = new WebSocket(wsUrl);
+
+            notificationSocket.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'profile_updated') {
+                    // This handles the real-time update from the database signal
+                    loadUser();
+                } else {
+                    setNotificationCount(prev => prev + 1);
+                }
+            };
+            notificationSocket.onclose = () => console.error('Notification socket closed');
+            
+            return () => {
+                window.removeEventListener('profileUpdated', handleProfileUpdate);
+                notificationSocket.close();
+            };
+        }
 
         return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
     }, [isLoggedIn]);

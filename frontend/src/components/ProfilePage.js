@@ -27,9 +27,7 @@ const ProfilePage = () => {
             const response = await axios.patch(`${apiUrl}/api/users/${user.id}/`, formData, {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
             });
-            // Update localStorage with the new user data
             localStorage.setItem('user', JSON.stringify(response.data));
-            // Send an event to tell the layout to refresh
             window.dispatchEvent(new CustomEvent('profileUpdated'));
             setMessage('Profile image updated successfully!');
             setProfileImage(null);

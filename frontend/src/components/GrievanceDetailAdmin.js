@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // <-- 1. IMPORT useCallback
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Typography, Paper, Box, TextField, Button, Select, MenuItem, FormControl, InputLabel, List, ListItem, ListItemText, Divider } from '@mui/material';
@@ -8,11 +8,11 @@ const GrievanceDetailAdmin = () => {
     const [grievance, setGrievance] = useState(null);
     const [comment, setComment] = useState('');
     const [status, setStatus] = useState('');
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-    // This function fetches the grievance data
-    const fetchGrievance = async () => {
+    // 2. WRAP fetchGrievance in useCallback
+    const fetchGrievance = useCallback(async () => {
         const token = localStorage.getItem('accessToken');
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
         try {
             const res = await axios.get(`${apiUrl}/api/grievances/${id}/`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -22,16 +22,15 @@ const GrievanceDetailAdmin = () => {
         } catch (error) {
             console.error("Failed to fetch grievance", error);
         }
-    };
+    }, [id, apiUrl]); // 3. ADD 'id' and 'apiUrl' as dependencies
 
     // This hook runs the fetch function when the page loads
     useEffect(() => {
         fetchGrievance();
-    }, [id]);
+    }, [fetchGrievance]); // 4. ADD `fetchGrievance` to the dependency array
 
     const handleUpdateStatus = async () => {
         const token = localStorage.getItem('accessToken');
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
         try {
             await axios.patch(`${apiUrl}/api/grievances/${id}/update_status/`, { status }, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -47,7 +46,6 @@ const GrievanceDetailAdmin = () => {
     const handleAddComment = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('accessToken');
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
         try {
             await axios.post(`${apiUrl}/api/grievances/${id}/add_comment/`, { comment_text: comment }, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -71,21 +69,20 @@ const GrievanceDetailAdmin = () => {
                 <Typography variant="body1" sx={{ mb: 2 }}><strong>Priority:</strong> {grievance.priority}</Typography>
                 <Typography variant="body2" sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>{grievance.description}</Typography>
                 
-                {/* --- THIS IS THE SECTION TO DISPLAY THE EVIDENCE --- */}
+                {/* --- THIS IS THE "DOWNLOAD" BUTTON --- */}
                 {grievance.evidence_image && (
                     <Box mt={2}>
                         <Typography variant="subtitle1" gutterBottom>Attached Evidence:</Typography>
                         <Button 
                             variant="outlined" 
-                            href={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${grievance.evidence_image}`} 
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href={`${apiUrl}${grievance.evidence_image}`} 
+                            download
                         >
-                            View Attached File
+                            Download Attached File
                         </Button>
                     </Box>
                 )}
-                {/* ------------------------------------------------- */}
+                {/* ------------------------------------ */}
             </Paper>
 
             <Paper sx={{ p: 3, mb: 3 }}>
