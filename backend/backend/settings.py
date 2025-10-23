@@ -75,6 +75,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://grievance-frontend-3fmk.onrender.com",
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True  # ✅ allow localhost React
+CORS_ALLOW_CREDENTIALS = True
+
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
@@ -104,5 +109,8 @@ AUTH_USER_MODEL = 'api.CustomUser'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
 }

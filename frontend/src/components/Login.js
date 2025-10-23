@@ -8,6 +8,7 @@ const grievanceCellMembers = [
     { name: 'Prof. Jane Smith', designation: 'Dean of Student Affairs', phone: '+91 98765 43211', imageUrl: '/images/g1.webp' },
     { name: 'Dr. Alex Ray', designation: 'Head of Grievance Cell', phone: '+91 98765 43212', imageUrl: '/images/g2.jpeg' }
 ];
+ 
 
 const decodeToken = (token) => {
     try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return null; }

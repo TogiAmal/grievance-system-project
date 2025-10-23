@@ -17,6 +17,7 @@ from .serializers import (
 )
 
 class GrievanceViewSet(viewsets.ModelViewSet):
+    queryset = Grievance.objects.all()
     serializer_class = GrievanceSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
     def get_queryset(self):

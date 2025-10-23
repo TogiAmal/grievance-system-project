@@ -1,9 +1,4 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
-=======
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
->>>>>>> 9c67756f7e253c640790da98c73422049bd66941
 import axios from 'axios';
 import {
   Container,
@@ -13,7 +8,7 @@ import {
   Box,
   Button,
   CircularProgress,
-  Alert
+  Alert,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 
@@ -24,7 +19,6 @@ const GrievanceStatus = () => {
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
 
-<<<<<<< HEAD
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
@@ -41,70 +35,20 @@ const GrievanceStatus = () => {
       } finally {
         setLoading(false);
       }
-=======
-    const fetchGrievance = useCallback(async () => {
-        const token = localStorage.getItem('accessToken');
-        try {
-            const res = await axios.get(`${apiUrl}/api/grievances/${id}/`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            setGrievance(res.data);
-            setStatus(res.data.status);
-        } catch (error) {
-            console.error("Failed to fetch grievance", error);
-        }
-    }, [id, apiUrl]); 
-
-    useEffect(() => {
-        fetchGrievance();
-    }, [fetchGrievance]); 
-
-    const handleUpdateStatus = async () => {
-        const token = localStorage.getItem('accessToken');
-        try {
-            await axios.patch(`${apiUrl}/api/grievances/${id}/update_status/`, { status }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            alert('Status updated successfully!');
-            fetchGrievance(); 
-        } catch (error) {
-            console.error("Failed to update status", error);
-            alert('Failed to update status.');
-        }
->>>>>>> 9c67756f7e253c640790da98c73422049bd66941
     };
     fetchGrievances();
   }, [apiUrl]);
 
-<<<<<<< HEAD
   const handleOpenModal = (grievance) => {
     setSelectedGrievance(grievance);
     setOpen(true);
   };
-=======
-    const handleAddComment = async (e) => {
-        e.preventDefault();
-        const token = localStorage.getItem('accessToken');
-        try {
-            await axios.post(`${apiUrl}/api/grievances/${id}/add_comment/`, { comment_text: comment }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            setComment('');
-            fetchGrievance(); 
-        } catch (error) {
-            console.error("Failed to add comment", error);
-            alert('Failed to post comment.');
-        }
-    };
->>>>>>> 9c67756f7e253c640790da98c73422049bd66941
 
   const handleCloseModal = () => {
     setOpen(false);
     setSelectedGrievance(null);
   };
 
-<<<<<<< HEAD
-  // ✅ Ensure valid absolute URLs
   const buildFileUrl = (fileUrl) => {
     if (!fileUrl) return null;
     if (fileUrl.startsWith('http')) return fileUrl;
@@ -112,14 +56,12 @@ const GrievanceStatus = () => {
     return `${apiUrl}${fileUrl}`;
   };
 
-  // ✅ View File
   const handleViewFile = (fileUrl) => {
     const finalUrl = buildFileUrl(fileUrl);
     if (!finalUrl) return;
     window.open(finalUrl, '_blank');
   };
 
-  // ✅ Download File
   const handleDownloadFile = async (fileUrl) => {
     const finalUrl = buildFileUrl(fileUrl);
     if (!finalUrl) return;
@@ -260,7 +202,6 @@ const GrievanceStatus = () => {
               <Typography variant="body1" sx={{ mb: 2 }}>
                 <strong>Priority:</strong> {selectedGrievance.priority}
               </Typography>
-
               <Typography
                 variant="body2"
                 sx={{
@@ -272,71 +213,6 @@ const GrievanceStatus = () => {
               >
                 {selectedGrievance.description}
               </Typography>
-
-              <Typography variant="h6" gutterBottom>
-                Internal Comments
-              </Typography>
-              <Box
-                sx={{
-                  maxHeight: 150,
-                  overflow: 'auto',
-                  mb: 2,
-                  p: 1,
-                  backgroundColor: '#fafafa',
-                  borderRadius: 1,
-                }}
-              >
-                {selectedGrievance.comments &&
-                selectedGrievance.comments.length > 0 ? (
-                  selectedGrievance.comments.map((comment) => (
-                    <Paper key={comment.id} sx={{ p: 1.5, mb: 1 }}>
-                      <Typography variant="body2">
-                        {comment.comment_text}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="textSecondary"
-                        sx={{ display: 'block', textAlign: 'right' }}
-                      >
-                        - {comment.user.name} on{' '}
-                        {new Date(comment.timestamp).toLocaleString()}
-                      </Typography>
-                    </Paper>
-                  ))
-                ) : (
-                  <Typography
-                    variant="body2"
-                    color="textSecondary"
-                    sx={{ p: 1 }}
-                  >
-                    No internal comments yet.
-                  </Typography>
-=======
-    return (
-        <Container maxWidth="md">
-            <Paper sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h4" gutterBottom>{grievance.title}</Typography>
-                <Typography variant="body1"><strong>Submitted by:</strong> {grievance.submitted_by.name}</Typography>
-                <Typography variant="body1"><strong>Current Status:</strong> {grievance.status}</Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}><strong>Priority:</strong> {grievance.priority}</Typography>
-                <Typography variant="body2" sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>{grievance.description}</Typography>
-                
-                {/* --- THIS IS THE FIXED "DOWNLOAD" BUTTON --- */}
-                {grievance.evidence_image && (
-                    <Box mt={2}>
-                        <Typography variant="subtitle1" gutterBottom>Attached Evidence:</Typography>
-                        <Button 
-                            variant="outlined" 
-                            href={`${apiUrl}${grievance.evidence_image}`} 
-                            download
-                        >
-                            Download Attached File
-                        </Button>
-                    </Box>
->>>>>>> 9c67756f7e253c640790da98c73422049bd66941
-                )}
-              </Box>
-
               {selectedGrievance.evidence_image && (
                 <Box mt={2}>
                   <Typography variant="subtitle1" gutterBottom>
@@ -345,13 +221,17 @@ const GrievanceStatus = () => {
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button
                       variant="outlined"
-                      onClick={() => handleViewFile(selectedGrievance.evidence_image)}
+                      onClick={() =>
+                        handleViewFile(selectedGrievance.evidence_image)
+                      }
                     >
                       View
                     </Button>
                     <Button
                       variant="contained"
-                      onClick={() => handleDownloadFile(selectedGrievance.evidence_image)}
+                      onClick={() =>
+                        handleDownloadFile(selectedGrievance.evidence_image)
+                      }
                     >
                       Download
                     </Button>
@@ -366,8 +246,4 @@ const GrievanceStatus = () => {
   );
 };
 
-<<<<<<< HEAD
 export default GrievanceStatus;
-=======
-export default GrievanceDetailAdmin;
->>>>>>> 9c67756f7e253c640790da98c73422049bd66941
