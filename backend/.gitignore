@@ -1,1 +1,10 @@
 gdrive_credentials.json
+# Environment variables
+backend/.env
+
+# Python cache
+*.pyc
+__pycache__/
+
+# OS files
+.DS_Store
