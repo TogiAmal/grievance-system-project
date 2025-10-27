@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // <-- 1. Import useNavigate
 import {
   Container,
   TextField,
@@ -18,6 +19,7 @@ const AddGrievance = () => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate(); // <-- 2. Initialize useNavigate
 
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -36,21 +38,31 @@ const AddGrievance = () => {
     formData.append('title', title);
     formData.append('description', description);
     formData.append('priority', priority);
-    if (file) formData.append('evidence_file', file);
+    if (file) formData.append('evidence_image', file);
 
     try {
       await axios.post(`${apiUrl}/api/grievances/`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart-form-data',
         },
       });
 
-      setMessage('✅ Grievance submitted successfully!');
+      // --- Updated Logic ---
+      // 3. Set success message and clear the form
+      setMessage('✅ Grievance submitted successfully! Redirecting to status page...');
       setTitle('');
       setDescription('');
       setPriority('LOW');
       setFile(null);
+      setError(''); // Clear any previous errors
+
+      // 4. Redirect after 2 seconds
+      setTimeout(() => {
+        navigate('/status');
+      }, 2000);
+      // ---------------------
+
     } catch (err) {
       console.error(err);
       if (err.response?.status === 401) {
@@ -78,6 +90,7 @@ const AddGrievance = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             sx={{ mb: 2 }}
+            disabled={!!message} // Disable form while redirecting
           />
 
           <TextField
@@ -89,6 +102,7 @@ const AddGrievance = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             sx={{ mb: 2 }}
+            disabled={!!message} // Disable form while redirecting
           />
 
           <TextField
@@ -98,13 +112,19 @@ const AddGrievance = () => {
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
             sx={{ mb: 2 }}
+            disabled={!!message} // Disable form while redirecting
           >
             <MenuItem value="LOW">Low</MenuItem>
             <MenuItem value="MEDIUM">Medium</MenuItem>
             <MenuItem value="HIGH">High</MenuItem>
           </TextField>
 
-          <Button variant="outlined" component="label" sx={{ mb: 2 }}>
+          <Button
+            variant="outlined"
+            component="label"
+            sx={{ mb: 2 }}
+            disabled={!!message} // Disable form while redirecting
+          >
             Upload File (Image or PDF)
             <input
               type="file"
@@ -136,6 +156,7 @@ const AddGrievance = () => {
             variant="contained"
             fullWidth
             sx={{ mt: 2 }}
+            disabled={!!message} // Disable form while redirecting
           >
             Submit Grievance
           </Button>

@@ -1,6 +1,6 @@
 // src/components/Dashboard.js
 import React from 'react';
-import { Container, Typography, Box, Grid, Paper, Card, CardActionArea, CardContent } from '@mui/material';
+import { Container, Typography,Grid, Paper, Card, CardActionArea, CardContent } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import PlagiarismOutlinedIcon from '@mui/icons-material/PlagiarismOutlined';
@@ -56,19 +56,19 @@ const Dashboard = () => {
             <Grid container spacing={4}>
                 {actionCards.map((card) => (
                     <Grid item xs={12} sm={6} md={4} key={card.title}>
-                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <CardActionArea component={RouterLink} to={card.link} sx={{ flexGrow: 1 }}>
-                                <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                                    {card.icon}
-                                    <Typography variant="h6" component="div" sx={{ mt: 2, mb: 1 }}>
-                                        {card.title}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {card.description}
-                                    </Typography>
-                                </CardContent>
-                            </CardActionArea>
-                        </Card>
+                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}> 
+                        <CardActionArea component={RouterLink} to={card.link} sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}> {/* Ensure flexGrow and flex properties */}
+                            <CardContent sx={{ textAlign: 'center', p: 3, flexGrow: 1 }}> {/* Allow content to grow */}
+                                {card.icon}
+                                <Typography variant="h6" component="div" sx={{ mt: 2, mb: 1 }}>
+                                    {card.title}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {card.description}
+                                </Typography>
+                            </CardContent>
+                        </CardActionArea>
+                    </Card>
                     </Grid>
                 ))}
             </Grid>

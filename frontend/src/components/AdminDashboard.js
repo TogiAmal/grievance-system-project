@@ -1,77 +1,127 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Container, Typography, Grid, Paper } from '@mui/material';
-import GrievanceTable from './GrievanceTable';
+import React from 'react';
+import { Container, Typography, Grid, Paper, Card, CardActionArea, CardContent } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+
+// Ensure ALL icons are imported
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import HourglassTopIcon from '@mui/icons-material/HourglassTop';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import MarkChatReadOutlinedIcon from '@mui/icons-material/MarkChatReadOutlined';
+//import DashboardIcon from '@mui/icons-material/Dashboard'; // For the 'Home' link
+
+const adminCards = [
+    {
+        title: 'Pending Grievances',
+        description: 'View and respond to all PENDING grievances.',
+        link: '/admin/review',
+        icon: <RateReviewOutlinedIcon sx={{ fontSize: 50, color: 'warning.main' }} />
+    },
+    {
+        title: 'In-Progress Grievances',
+        description: 'View grievances currently being worked on.',
+        link: '/admin/in-progress',
+        icon: <HourglassTopIcon sx={{ fontSize: 50, color: 'info.main' }} />
+    },
+    {
+        title: 'Resolved Grievances',
+        description: 'Browse the archive of all RESOLVED grievances.',
+        link: '/admin/resolved',
+        icon: <CheckCircleOutlineIcon sx={{ fontSize: 50, color: 'success.main' }} />
+    },
+    {
+        title: 'User Management',
+        description: 'Manage user roles and permissions for the portal.',
+        link: '/admin/users',
+        icon: <PeopleAltOutlinedIcon sx={{ fontSize: 50, color: 'primary.main' }} />
+    },
+    {
+        title: 'View Statistics',
+        description: 'See dashboard statistics for grievance resolution rates.',
+        link: '/admin/stats',
+        icon: <BarChartOutlinedIcon sx={{ fontSize: 50, color: 'primary.main' }} />
+    },
+    {
+        title: 'Live Chat Inbox',
+        description: 'Respond to live chat requests from students.',
+        link: '/admin/inbox',
+        icon: <MarkChatReadOutlinedIcon sx={{ fontSize: 50, color: 'primary.main' }} />
+    }
+];
+
 
 const AdminDashboard = () => {
-    const [stats, setStats] = useState(null);
-    const [grievances, setGrievances] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-
-    useEffect(() => {
-        const fetchData = async () => {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                setError('Authentication token not found. Please log in.');
-                setLoading(false);
-                return;
-            }
-            
-            const headers = { 'Authorization': `Bearer ${token}` };
-            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-
-            try {
-                const [statsRes, grievancesRes] = await Promise.all([
-                    axios.get(`${apiUrl}/api/grievances/stats/`, { headers }),
-                    axios.get(`${apiUrl}/api/grievances/`, { headers })
-                ]);
-                
-                setStats(statsRes.data);
-                setGrievances(grievancesRes.data);
-            } catch (err) {
-                setError('Failed to fetch admin data. You may not have permission.');
-                console.error("Failed to fetch admin data", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, []);
-
-    if (loading) return <Typography>Loading dashboard...</Typography>;
-    if (error) return <Typography color="error">{error}</Typography>;
+    const userName = localStorage.getItem('userName');
 
     return (
         <Container maxWidth="lg">
-            <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>Admin Dashboard</Typography>
-            
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                {/* 'item' prop removed from the Grid components below */}
-                <Grid xs={12} sm={4}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h6">Total Grievances</Typography>
-                        <Typography variant="h4">{stats?.total_grievances}</Typography>
-                    </Paper>
-                </Grid>
-                <Grid xs={12} sm={4}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h6">Pending</Typography>
-                        <Typography variant="h4" color="error">{stats?.pending_grievances}</Typography>
-                    </Paper>
-                </Grid>
-                <Grid xs={12} sm={4}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h6">Resolved</Typography>
-                        <Typography variant="h4" color="primary">{stats?.resolved_grievances}</Typography>
-                    </Paper>
-                </Grid>
-            </Grid>
-
-            <Paper sx={{ p: 2, height: 600, width: '100%' }}>
-                <Typography variant="h5" gutterBottom>All Submitted Grievances</Typography>
-                <GrievanceTable grievances={grievances} />
+            {/* Hero Section */}
+            <Paper
+                sx={{
+                    p: { xs: 2, sm: 3, md: 4 }, // Responsive padding
+                    mb: 5,
+                    backgroundColor: 'primary.dark',
+                    color: 'white',
+                    textAlign: 'center',
+                    borderRadius: 2
+                }}
+                elevation={4}
+            >
+                <Typography variant="h4" component="h1" gutterBottom>
+                    Admin Dashboard
+                </Typography>
+                <Typography variant="h6">
+                    Welcome, {userName || 'Admin'}. Manage the portal from here.
+                </Typography>
             </Paper>
+
+            {/* Action Cards Section */}
+            {/* Grid container ensures proper spacing and wrapping */}
+            <Grid container spacing={3} alignItems="stretch"> {/* Added alignItems="stretch" */}
+                {adminCards.map((card) => (
+                    // Grid item defines the size for different screen widths
+                    <Grid item xs={12} sm={6} md={4} key={card.title}>
+                        {/* --- Card Styling for Alignment --- */}
+                        <Card sx={{
+                            height: '100%', // Make card fill the grid item height
+                            display: 'flex',
+                            flexDirection: 'column', // Stack content vertically
+                            justifyContent: 'space-between' // Push content apart if needed
+                        }}>
+                            <CardActionArea
+                                component={RouterLink}
+                                to={card.link}
+                                sx={{
+                                    flexGrow: 1, // Allow action area to grow
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center', // Center icon/text horizontally
+                                    justifyContent: 'flex-start', // Align content to the top
+                                    p: 2 // Add padding to action area
+                                }}
+                            >
+                                <CardContent sx={{
+                                     textAlign: 'center',
+                                     flexGrow: 1, // Allow content to grow
+                                     display: 'flex',
+                                     flexDirection: 'column',
+                                     justifyContent: 'center' // Center content vertically within its space
+                                     }}>
+                                    {card.icon}
+                                    <Typography variant="h6" component="div" sx={{ mt: 2, mb: 1 }}>
+                                        {card.title}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {card.description}
+                                    </Typography>
+                                </CardContent>
+                            </CardActionArea>
+                        </Card>
+                        {/* --- End Card Styling --- */}
+                    </Grid>
+                ))}
+            </Grid>
         </Container>
     );
 };

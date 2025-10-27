@@ -7,9 +7,9 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import GrievanceTable from './GrievanceTable';
+import GrievanceTable from './GrievanceTable'; 
 
-const AdminReviewPage = () => {
+const ResolvedGrievances = () => {
   const [grievances, setGrievances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,14 +24,14 @@ const AdminReviewPage = () => {
         return;
       }
       try {
-        // This URL now correctly fetches ONLY non-resolved grievances
-        const response = await axios.get(`${apiUrl}/api/grievances/?status_filter=unresolved`, {
+        // This URL now correctly fetches ONLY resolved grievances
+        const response = await axios.get(`${apiUrl}/api/grievances/?status_filter=resolved`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setGrievances(response.data);
       } catch (err) {
         console.error(err);
-        setError('Failed to fetch pending grievances.');
+        setError('Failed to fetch resolved grievances.');
       } finally {
         setLoading(false);
       }
@@ -59,10 +59,10 @@ const AdminReviewPage = () => {
     <Container maxWidth="lg">
       <Paper sx={{ p: 4, borderRadius: 2, boxShadow: 3 }}>
         <Typography variant="h4" gutterBottom align="center">
-          Pending & In-Progress Grievances
+          Resolved Grievances
         </Typography>
         {grievances.length === 0 ? (
-          <Alert severity="info">There are no pending grievances to review.</Alert>
+          <Alert severity="info">There are no resolved grievances.</Alert>
         ) : (
           <GrievanceTable grievances={grievances} />
         )}
@@ -71,4 +71,4 @@ const AdminReviewPage = () => {
   );
 };
 
-export default AdminReviewPage;
+export default ResolvedGrievances;

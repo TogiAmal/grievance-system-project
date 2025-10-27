@@ -4,10 +4,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Button, TextField, Container, Typography, Box, Paper, Alert, Grid, Avatar } from '@mui/material';
 
 const grievanceCellMembers = [
-    { name: 'Dr. John Doe', designation: 'Principal', phone: '+91 98765 43210', imageUrl: '/images/g3.jpeg' },
-    { name: 'Prof. Jane Smith', designation: 'Dean of Student Affairs', phone: '+91 98765 43211', imageUrl: '/images/g1.webp' },
-    { name: 'Dr. Alex Ray', designation: 'Head of Grievance Cell', phone: '+91 98765 43212', imageUrl: '/images/g2.jpeg' }
+    { name: 'Dr. Pious Thomas', designation: 'Chairperson', phone: '9980795902', imageUrl: '/images/g3.jpeg' }, // Assuming g3.jpeg is Dr. Pious
+    { name: 'Dr. Jyothis Thomas', designation: 'Member', phone: '9447205778', imageUrl: '/images/g1.webp' }, // Assuming g1.webp is Dr. Jyothis
+    { name: 'Sabarinath G', designation: 'Member', phone: '9447583520', imageUrl: '/images/g2.jpeg' }, // Assuming g2.jpeg is Sabarinath
+    { name: 'Dr. Rahul Shajan', designation: 'Member', phone: '8921397634', imageUrl: '/images/g3.jpeg' }, // Reusing an image, update as needed
+    { name: 'Dr. Suma Mathew', designation: 'Member', phone: '9446011640', imageUrl: '/images/g1.webp' }, // Reusing an image, update as needed
+    { name: 'Vice Chairman of the College Union, representing students', designation: 'Special Invitee', phone: '', imageUrl: '/images/g2.jpeg' } // Reusing an image, update as needed
 ];
+
  
 
 const decodeToken = (token) => {

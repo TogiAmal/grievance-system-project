@@ -1,3 +1,5 @@
+# backend/api/models.py
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -15,7 +17,7 @@ class CustomUser(AbstractUser):
     phone_number = models.CharField(max_length=15, null=True, blank=True)
     college_email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
     profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
-
+    designation = models.CharField(max_length=100, blank=True, null=True)
     def save(self, *args, **kwargs):
         if self.college_email:
             self.email = self.college_email
@@ -24,7 +26,9 @@ class CustomUser(AbstractUser):
 class Grievance(models.Model):
     STATUS_CHOICES = [
         ('SUBMITTED', 'Submitted'),
-        ('IN_REVIEW', 'In Review'),
+        # --- Corrected this line ---
+        ('IN_PROGRESS', 'In Progress'), # Use underscore here
+        # ---------------------------
         ('ACTION_TAKEN', 'Action Taken'),
         ('RESOLVED', 'Resolved'),
     ]

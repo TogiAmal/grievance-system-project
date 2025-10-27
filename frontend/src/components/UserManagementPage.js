@@ -1,206 +1,300 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Typography, Paper, Modal, Box, Select, MenuItem, Button, FormControl, InputLabel, IconButton, TextField } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-
-const style = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-};
+import {
+    Container,
+    Typography,
+    Paper,
+    Box,
+    CircularProgress,
+    Alert,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Avatar,
+    IconButton,
+    Select,
+    MenuItem,
+    FormControl,
+    Snackbar, // For feedback
+    Button,   // Added Button import
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import AddIcon from '@mui/icons-material/Add'; // Import Add icon
+import AddUserModal from './AddUserModal'; // Import the modal component
 
 const UserManagementPage = () => {
     const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [newRole, setNewRole] = useState('');
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    
-    const [addUserModalOpen, setAddUserModalOpen] = useState(false);
-    const [newUser, setNewUser] = useState({
-        name: '',
-        admission_number: '',
-        college_email: '',
-        role: 'student',
-        password: ''
-    });
+    const [loading, setLoading] = useState(true); // Loading for initial fetch
+    const [error, setError] = useState('');
+    const [editingUserId, setEditingUserId] = useState(null);
+    const [selectedRole, setSelectedRole] = useState('');
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    const [actionLoading, setActionLoading] = useState(false); // Loading for actions (save role)
+    const [actionError, setActionError] = useState('');   // Error specific to actions
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false); // State for Add User modal
 
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    const token = localStorage.getItem('accessToken');
+
+    // Function to fetch users
     const fetchUsers = async () => {
-        const token = localStorage.getItem('accessToken');
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+        // Don't set main loading to true here, only on initial mount
+        setError(''); // Clear previous errors on refetch
+        if (!token) {
+            setError('Authentication required.');
+            setLoading(false); // Ensure initial loading stops
+            return;
+        }
         try {
             const response = await axios.get(`${apiUrl}/api/users/`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
             });
             setUsers(response.data);
-        } catch (error) {
-            console.error("Failed to fetch users", error);
+        } catch (err) {
+            console.error("Error fetching users:", err);
+            // Check if the error is 403 Forbidden
+            if (err.response?.status === 403) {
+                 setError(`Permission Denied: ${err.response?.data?.detail || 'You do not have permission to view users.'}`);
+            } else {
+                 setError(`Failed to fetch users. ${err.response?.data?.detail || err.message}`);
+            }
         } finally {
-            setLoading(false);
+            // Only set initial loading to false
+            if (loading) setLoading(false);
         }
     };
 
+    // Fetch users on component mount
     useEffect(() => {
         fetchUsers();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty array ensures this runs only once initially
 
-    const handleOpenEditModal = (user) => {
-        setSelectedUser(user);
-        setNewRole(user.role);
-        setEditModalOpen(true);
+    // Handle starting the edit mode for a user's role
+    const handleEditRole = (user) => {
+        setEditingUserId(user.id);
+        setSelectedRole(user.role);
+        setActionError(''); // Clear action errors when starting edit
     };
 
-    const handleCloseEditModal = () => setEditModalOpen(false);
-
-    // --- ADD THIS FUNCTION ---
-    const handleAddUserModalClose = () => {
-        setAddUserModalOpen(false);
-        // Reset form when modal is closed
-        setNewUser({ name: '', admission_number: '', college_email: '', role: 'student', password: '' });
+    // Handle canceling the edit mode
+    const handleCancelEdit = () => {
+        setEditingUserId(null);
+        setActionError('');
     };
-    // -------------------------
 
-    const handleRoleChange = async () => {
-        if (!selectedUser) return;
-        const token = localStorage.getItem('accessToken');
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+    // Handle saving the role change
+    const handleSaveRole = async (userId) => {
+        setActionError('');
+        if (!selectedRole) {
+            setActionError('Please select a role.'); // Show error locally
+            return;
+        }
+        setActionLoading(true);
+
         try {
-            await axios.patch(`${apiUrl}/api/users/${selectedUser.id}/change_role/`, { role: newRole }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            fetchUsers();
-            handleCloseEditModal();
-        } catch (error) {
-            console.error("Failed to change role", error);
+            await axios.patch(
+                `${apiUrl}/api/users/${userId}/change_role/`,
+                { role: selectedRole },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setSnackbarMessage('Role updated successfully!');
+            setSnackbarSeverity('success');
+            setSnackbarOpen(true);
+            setEditingUserId(null); // Exit edit mode
+            await fetchUsers(); // Refresh the user list
+        } catch (err) {
+            console.error("Error updating role:", err);
+            const errorMessage = err.response?.data?.error || err.response?.data?.detail || 'Failed to update role.';
+            // Use snackbar for feedback instead of actionError state
+            setSnackbarMessage(`Error: ${errorMessage}`);
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+            // Keep editing mode open on error to allow correction
+        } finally {
+            setActionLoading(false);
         }
     };
 
-    const handleDeleteUser = async (userId) => {
-        if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            const token = localStorage.getItem('accessToken');
-            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-            try {
-                await axios.delete(`${apiUrl}/api/users/${userId}/`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                fetchUsers();
-            } catch (error) {
-                console.error("Failed to delete user", error);
-            }
-        }
+    // Modal Handlers
+    const handleOpenAddModal = () => setIsAddModalOpen(true);
+    const handleCloseAddModal = () => setIsAddModalOpen(false);
+
+    // Callback for when a user is successfully added via the modal
+    const handleUserAdded = () => {
+        fetchUsers(); // Re-fetch the user list
+        setSnackbarMessage('User added successfully!');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
     };
 
-    const handleAddUser = async (e) => {
-        e.preventDefault();
-        const token = localStorage.getItem('accessToken');
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-        try {
-            await axios.post(`${apiUrl}/api/users/`, newUser, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            fetchUsers();
-            handleAddUserModalClose();
-        } catch (error) {
-            console.error("Failed to add user", error);
-            if (error.response && error.response.data) {
-                const errorData = error.response.data;
-                const errorMessages = Object.entries(errorData).map(([key, value]) => `${key}: ${value.join(', ')}`).join('\n');
-                alert(`Failed to add user:\n${errorMessages}`);
-            } else {
-                alert('Failed to add user. An unknown error occurred.');
-            }
+    // Handle closing the snackbar
+    const handleCloseSnackbar = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
         }
+        setSnackbarOpen(false);
     };
-    
-    const columns = [
-        { field: 'id', headerName: 'ID', width: 90 },
-        { field: 'name', headerName: 'Name', flex: 1 },
-        { field: 'username', headerName: 'Admission No / Username', flex: 1 },
-        { field: 'role', headerName: 'Role', width: 150 },
-        {
-            field: 'actions',
-            headerName: 'Actions',
-            sortable: false,
-            width: 200,
-            renderCell: (params) => (
-                <Box>
-                    <Button variant="contained" size="small" onClick={() => handleOpenEditModal(params.row)} sx={{ mr: 1 }}>
-                        Edit Role
-                    </Button>
-                    <IconButton color="error" onClick={() => handleDeleteUser(params.row.id)}>
-                        <DeleteIcon />
-                    </IconButton>
-                </Box>
-            ),
-        },
-    ];
+
+    // Initial loading state
+    if (loading) {
+        return (
+            <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
+                <CircularProgress />
+            </Container>
+        );
+    }
+
+    // Display error if fetching failed initially
+    if (error && users.length === 0) { // Only show full page error if list is empty
+        return (
+            <Container>
+                <Alert severity="error" sx={{ mt: 4 }}>{error}</Alert>
+            </Container>
+        );
+    }
 
     return (
         <Container maxWidth="lg">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h4" gutterBottom>User Management</Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddUserModalOpen(true)}>
+            {/* Title and Add Button */}
+             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, mt: 4 }}>
+                <Typography variant="h4" component="h1">
+                    User Management
+                </Typography>
+                <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleOpenAddModal}
+                >
                     Add New User
                 </Button>
             </Box>
-            <Paper sx={{ height: 600, width: '100%' }}>
-                <DataGrid
-                    rows={users}
-                    columns={columns}
-                    loading={loading}
-                    pageSizeOptions={[10, 25]}
-                />
+
+            {/* Display general fetch error here if list might still be partially shown */}
+             {error && users.length > 0 && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+
+            <Paper sx={{ p: { xs: 1, sm: 2, md: 3 }, borderRadius: 2, boxShadow: 3 }}>
+                {users.length === 0 && !loading ? ( // Check loading state here too
+                    <Alert severity="info">No users found.</Alert>
+                ) : (
+                    <TableContainer>
+                        <Table sx={{ minWidth: 650 }} aria-label="user table" size="small">
+                            <TableHead>
+                                <TableRow sx={{ '& th': { fontWeight: 'bold' } }}>
+                                    <TableCell>Avatar</TableCell>
+                                    <TableCell>Name</TableCell>
+                                    <TableCell>Username / ID</TableCell>
+                                    <TableCell>Role</TableCell>
+                                    <TableCell align="center">Actions</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {users.map((user) => (
+                                    <TableRow
+                                        key={user.id}
+                                        hover // Add hover effect
+                                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                                    >
+                                        <TableCell sx={{ p: 1}}> {/* Reduced padding */}
+                                            <Avatar src={user.profile_image || undefined} sx={{ width: 32, height: 32 }}>
+                                                {!user.profile_image ? user.name?.charAt(0).toUpperCase() || user.username?.charAt(0).toUpperCase() : null}
+                                            </Avatar>
+                                        </TableCell>
+                                        <TableCell component="th" scope="row" sx={{ p: 1}}>
+                                            {user.name || '(No Name Provided)'}
+                                        </TableCell>
+                                        <TableCell sx={{ p: 1}}>{user.username}</TableCell>
+                                        <TableCell sx={{ textTransform: 'capitalize', p: 1 }}>
+                                            {editingUserId === user.id ? (
+                                                <FormControl size="small" sx={{ minWidth: 120 }}>
+                                                    <Select
+                                                        value={selectedRole}
+                                                        onChange={(e) => setSelectedRole(e.target.value)}
+                                                        displayEmpty
+                                                        autoFocus // Focus the select when edit starts
+                                                    >
+                                                        {/* Ensure these values match backend ROLE_CHOICES */}
+                                                        <MenuItem value="student">Student</MenuItem>
+                                                        <MenuItem value="teacher">Teacher</MenuItem>
+                                                        <MenuItem value="staff">Non-Teaching Staff</MenuItem>
+                                                        <MenuItem value="grievance_cell">Grievance Cell</MenuItem>
+                                                        <MenuItem value="admin">Admin</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            ) : (
+                                                user.role?.replace('_', ' ') || 'N/A'
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="center" sx={{ p: 1}}>
+                                            {editingUserId === user.id ? (
+                                                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                                                    <Button
+                                                        size="small"
+                                                        variant="contained"
+                                                        color="primary"
+                                                        onClick={() => handleSaveRole(user.id)}
+                                                        disabled={actionLoading}
+                                                    >
+                                                        {actionLoading ? <CircularProgress size={20} color="inherit"/> : 'Save'}
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={handleCancelEdit} // Use cancel handler
+                                                        disabled={actionLoading}
+                                                     >
+                                                         Cancel
+                                                     </Button>
+                                                 </Box>
+
+                                            ) : (
+                                                <IconButton
+                                                    aria-label="edit role"
+                                                    onClick={() => handleEditRole(user)}
+                                                    color="primary"
+                                                    disabled={actionLoading} // Disable edit if another action is in progress
+                                                    size="small"
+                                                >
+                                                    <EditIcon fontSize='small'/>
+                                                </IconButton>
+                                            )}
+                                            {/* Add Delete Button/Logic Here if needed */}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
+                 {/* Display action-specific errors below table */}
+                 {actionError && editingUserId && <Alert severity="error" sx={{ mt: 2 }}>{actionError}</Alert>}
             </Paper>
 
-            {/* Modal for Editing Role */}
-            <Modal open={editModalOpen} onClose={handleCloseEditModal}>
-                <Box sx={style}>
-                    <Typography variant="h6" component="h2">Change Role for {selectedUser?.name}</Typography>
-                    <FormControl fullWidth sx={{ mt: 2 }}>
-                        <InputLabel>Role</InputLabel>
-                        <Select value={newRole} label="Role" onChange={(e) => setNewRole(e.target.value)}>
-                            <MenuItem value="student">Student</MenuItem>
-                            <MenuItem value="teacher">Teacher</MenuItem>
-                            <MenuItem value="staff">Non-Teaching Staff</MenuItem>
-                            <MenuItem value="grievance_cell">Grievance Cell</MenuItem>
-                            <MenuItem value="admin">Admin</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <Button onClick={handleRoleChange} variant="contained" sx={{ mt: 2 }}>Save Changes</Button>
-                </Box>
-            </Modal>
+            {/* Add User Modal */}
+            <AddUserModal
+                open={isAddModalOpen}
+                handleClose={handleCloseAddModal}
+                onUserAdded={handleUserAdded}
+            />
 
-            {/* Modal for Adding a New User */}
-            <Modal open={addUserModalOpen} onClose={handleAddUserModalClose}>
-                <Box sx={style}>
-                    <Typography variant="h6" component="h2">Create a New User</Typography>
-                    <Box component="form" onSubmit={handleAddUser}>
-                        <TextField fullWidth margin="normal" label="Full Name" name="name" onChange={(e) => setNewUser({...newUser, name: e.target.value})} required />
-                        <TextField fullWidth margin="normal" label="Admission / Employee ID" name="admission_number" onChange={(e) => setNewUser({...newUser, admission_number: e.target.value})} required />
-                        <TextField fullWidth margin="normal" label="College Email" name="college_email" type="email" onChange={(e) => setNewUser({...newUser, college_email: e.target.value})} required />
-                        <TextField fullWidth margin="normal" label="Initial Password" name="password" type="password" onChange={(e) => setNewUser({...newUser, password: e.target.value})} required />
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Role</InputLabel>
-                            <Select name="role" value={newUser.role} label="Role" onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
-                                <MenuItem value="student">Student</MenuItem>
-                                <MenuItem value="teacher">Teacher</MenuItem>
-                                <MenuItem value="staff">Non-Teaching Staff</MenuItem>
-                                <MenuItem value="grievance_cell">Grievance Cell</MenuItem>
-                                <MenuItem value="admin">Admin</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <Button type="submit" variant="contained" sx={{ mt: 2 }}>Create User</Button>
-                    </Box>
-                </Box>
-            </Modal>
+             {/* Snackbar for feedback */}
+             <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={4000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }} variant="filled">
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 };

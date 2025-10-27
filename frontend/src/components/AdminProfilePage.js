@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Button, Container, Typography, Box, Paper, Alert, Avatar, CircularProgress } from '@mui/material'; // Added CircularProgress
+import { Button, Container, Typography, Box, Paper, Alert, Avatar, CircularProgress } from '@mui/material';
 
-const ProfilePage = () => {
+// --- RENAMED COMPONENT ---
+const AdminProfilePage = () => {
   const [profileImage, setProfileImage] = useState(null); // File object for upload
   const [previewUrl, setPreviewUrl] = useState(''); // URL for image preview
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false); // Loading state for the submit action
-  // User state should ideally fetch fresh data, but using localStorage as fallback
   const [user, setUser] = useState(null); // Initialize as null
 
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
   const token = localStorage.getItem('accessToken'); // Get token for requests
 
-  // --- Fetch User Data ---
-  // Fetch fresh user data on mount to ensure it's up-to-date
+  // --- Fetch User Data (same as ProfilePage, uses /me/) ---
   useEffect(() => {
     const fetchUser = async () => {
       if (!token) {
@@ -23,111 +22,89 @@ const ProfilePage = () => {
         return;
       }
       try {
-        const response = await axios.get(`${apiUrl}/api/users/me/`, {
+        const response = await axios.get(`${apiUrl}/api/users/me/`, { // Fetches the logged-in user's data
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(response.data);
-        // Set initial preview if user already has an image
         if (response.data.profile_image) {
             setPreviewUrl(getFullUrl(response.data.profile_image));
         }
       } catch (err) {
         console.error("Failed to fetch user profile", err);
         setError("Failed to load profile data.");
-        // Fallback to localStorage if fetch fails?
-        // setUser(JSON.parse(localStorage.getItem('user')));
       }
     };
     fetchUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiUrl, token]); // Dependencies: run when apiUrl or token changes
+  }, [apiUrl, token]); // Dependencies
 
-  // Generate full image URL helper
+  // Generate full image URL helper (same as ProfilePage)
   const getFullUrl = (url) => {
     if (!url) return '';
-    // Check if the URL is already absolute
     if (url.startsWith('http://') || url.startsWith('https://')) {
         return url;
     }
-    // Otherwise, prepend the API base URL (remove trailing slash if present)
     const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
     return `${baseUrl}${url}`;
   };
 
 
-  // Show live preview when a new image is selected
+  // Show live preview (same as ProfilePage)
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setProfileImage(file);
-      setPreviewUrl(URL.createObjectURL(file)); // Show preview of the selected file
-      setMessage(''); // Clear previous messages
+      setPreviewUrl(URL.createObjectURL(file));
+      setMessage('');
       setError('');
     }
   };
 
-  // Upload new profile image
+  // Upload new profile image (same as ProfilePage, uses /me/update/)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setError('');
-
     if (!profileImage) {
       setError('Please select an image to upload.');
       return;
     }
-
     if (!token) {
         setError('Authentication error. Please log in again.');
         return;
     }
-
-    setLoading(true); // Start loading indicator
-
+    setLoading(true);
     const formData = new FormData();
     formData.append('profile_image', profileImage);
 
     try {
-      // --- CORRECTED URL ---
       const response = await axios.patch(
-        `${apiUrl}/api/users/me/update/`, // Use the dedicated endpoint
+        `${apiUrl}/api/users/me/update/`, // Correct endpoint for updating own profile
         formData,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data', // Correct header for files
+            'Content-Type': 'multipart/form-data',
           },
         }
       );
-      // --- END CORRECTION ---
-
-      // Update user state with the response data (which includes the new image URL)
       setUser(response.data);
-      // Update localStorage as well if other components rely on it directly
-      localStorage.setItem('user', JSON.stringify(response.data));
-
+      localStorage.setItem('user', JSON.stringify(response.data)); // Update local storage if needed
       setMessage('Profile image updated successfully!');
-      setProfileImage(null); // Clear the selected file state
-      // Keep the preview URL showing the newly saved image from user state
-      setPreviewUrl(getFullUrl(response.data.profile_image));
-
-      // Notify other components (like Layout) that the profile was updated
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: response.data }));
-
+      setProfileImage(null);
+      setPreviewUrl(getFullUrl(response.data.profile_image)); // Update preview with saved image URL
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: response.data })); // Notify layout
     } catch (err) {
       console.error("Error updating profile image:", err);
-      const errorMsg = err.response?.data?.profile_image ? err.response.data.profile_image[0] // Check for specific field error
+      const errorMsg = err.response?.data?.profile_image ? err.response.data.profile_image[0]
                      : err.response?.data?.detail || 'Failed to update profile image. Please ensure it is a valid image file and try again.';
       setError(errorMsg);
-      // Revert preview URL back to original if upload fails? Optional.
-      // setPreviewUrl(getFullUrl(user?.profile_image));
     } finally {
-        setLoading(false); // Stop loading indicator
+        setLoading(false);
     }
   };
 
-
-  // Show loading spinner while fetching initial user data
+  // Loading state (same as ProfilePage)
    if (user === null && !error) {
      return (
        <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}>
@@ -139,29 +116,25 @@ const ProfilePage = () => {
   return (
     <Container maxWidth="sm" sx={{ mt: 4 }}>
       <Paper sx={{ p: { xs: 2, sm: 3, md: 4 }, borderRadius: 2, boxShadow: 3 }}>
+        {/* --- UPDATED TITLE --- */}
         <Typography variant="h4" gutterBottom align="center">
-          Your Profile
+          Admin Profile
         </Typography>
+        {/* --- END TITLE UPDATE --- */}
 
-        {/* Current or new profile image preview */}
+
+        {/* Image Preview (same as ProfilePage) */}
         <Box display="flex" justifyContent="center" mb={3}>
           <Avatar
-            // Use previewUrl if a new image is selected, otherwise use user.profile_image
             src={previewUrl || getFullUrl(user?.profile_image)}
             alt={user?.name || user?.username || 'User'}
-            sx={{
-              width: 120,
-              height: 120,
-              border: '3px solid',
-              borderColor: 'primary.main', // Use theme color
-            }}
+            sx={{ width: 120, height: 120, border: '3px solid', borderColor: 'primary.main' }}
           >
-           {/* Fallback initial if no image */}
            {!previewUrl && !user?.profile_image && (user?.name || user?.username || '?').charAt(0).toUpperCase()}
           </Avatar>
         </Box>
 
-        {/* Display user details (optional) */}
+        {/* User Details (same as ProfilePage) */}
         <Typography variant="h6" align="center">{user?.name || '(No Name Provided)'}</Typography>
         <Typography variant="body1" align="center" color="text.secondary" gutterBottom>
           {user?.username} ({user?.role?.replace('_', ' ') || 'Role Unknown'})
@@ -170,7 +143,7 @@ const ProfilePage = () => {
            {user?.college_email}
          </Typography>
 
-
+        {/* Form (same as ProfilePage) */}
         <Box component="form" onSubmit={handleSubmit} textAlign="center">
           <Button variant="outlined" component="label" disabled={loading}>
             {profileImage ? 'Change Image' : 'Upload New Profile Image'}
@@ -178,24 +151,20 @@ const ProfilePage = () => {
           </Button>
 
           {profileImage && (
-            <Typography
-              sx={{ mt: 1, mb: 2, display: 'block', color: 'text.secondary', fontStyle: 'italic' }}
-            >
+            <Typography sx={{ mt: 1, mb: 2, display: 'block', color: 'text.secondary', fontStyle: 'italic' }}>
               Selected: {profileImage.name}
             </Typography>
           )}
 
-          {/* Display feedback messages */}
           {message && <Alert severity="success" sx={{ mt: 2, mb: 2 }}>{message}</Alert>}
           {error && <Alert severity="error" sx={{ mt: 2, mb: 2 }}>{error}</Alert>}
 
-          {/* Show Save button only if a new image is selected */}
           {profileImage && (
              <Button
                type="submit"
                variant="contained"
                color="primary"
-               disabled={loading} // Disable button while loading
+               disabled={loading}
                sx={{ mt: 2, display: 'block', mx: 'auto' }}
              >
                {loading ? <CircularProgress size={24} color="inherit"/> : 'Save Changes'}
@@ -207,4 +176,5 @@ const ProfilePage = () => {
   );
 };
 
-export default ProfilePage;
+// --- RENAMED EXPORT ---
+export default AdminProfilePage;

@@ -1,137 +1,217 @@
-import React, { useState, useEffect } from 'react';
-import { AppBar, Toolbar, Typography, Button, Container, Box, IconButton, Menu, MenuItem, useTheme, useMediaQuery, Badge, Divider, ListItemText } from '@mui/material';
-import { Link, useNavigate, Outlet } from 'react-router-dom';
-import MenuIcon from '@mui/icons-material/Menu';
-import NotificationsIcon from '@mui/icons-material/Notifications';
+import React, { useState, useEffect, useRef } from 'react';
+import { Outlet, Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import {
+    Box, CssBaseline, AppBar, Toolbar, Typography, Drawer, List, ListItem,
+    ListItemButton, ListItemIcon, ListItemText, Divider, IconButton, Badge,
+    CircularProgress, Avatar, Menu, MenuItem
+} from '@mui/material';
+import {
+    Dashboard as DashboardIcon, RateReviewOutlined as RateReviewOutlinedIcon,
+    HourglassTop as HourglassTopIcon, CheckCircleOutline as CheckCircleOutlineIcon,
+    PeopleAltOutlined as PeopleAltOutlinedIcon, BarChartOutlined as BarChartOutlinedIcon,
+    MarkChatReadOutlined as MarkChatReadOutlinedIcon, Notifications as NotificationsIcon,
+    AccountCircle, Logout as LogoutIcon, Password as PasswordIcon, ManageAccounts as ManageAccountsIcon
+} from '@mui/icons-material';
+import { toast } from 'react-toastify';
+import axios from 'axios';
+import GroupIcon from '@mui/icons-material/Group';
+const drawerWidth = 240;
 
 const AdminLayout = () => {
+    const location = useLocation();
     const navigate = useNavigate();
-    const userName = localStorage.getItem('userName');
-    const isLoggedIn = !!localStorage.getItem('accessToken');
-    const [notifications, setNotifications] = useState([]);
-    
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const token = localStorage.getItem('accessToken');
+    const ws = useRef(null);
+    const [notificationCount, setNotificationCount] = useState(0);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [profileAnchorEl, setProfileAnchorEl] = useState(null);
+    const [profileImage, setProfileImage] = useState(null);
+    const [loadingProfile, setLoadingProfile] = useState(false);
 
-    const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
-    const [notificationMenuAnchor, setNotificationMenuAnchor] = useState(null);
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:8000';
+
+    // Navigation items for the sidebar
+    const navItems = [
+        { text: 'Home', icon: <DashboardIcon />, link: '/admin/dashboard' },
+        { text: 'Pending', icon: <RateReviewOutlinedIcon />, link: '/admin/review' },
+        { text: 'In Progress', icon: <HourglassTopIcon />, link: '/admin/in-progress' },
+        { text: 'Resolved', icon: <CheckCircleOutlineIcon />, link: '/admin/resolved' },
+        { text: 'User Management', icon: <PeopleAltOutlinedIcon />, link: '/admin/users' },
+        { text: 'Cell Members', icon: <GroupIcon />, link: '/admin/cell-members' },
+        { text: 'Statistics', icon: <BarChartOutlinedIcon />, link: '/admin/stats' },
+        { text: 'Chat Inbox', icon: <MarkChatReadOutlinedIcon />, link: '/admin/inbox' },
+    ];
 
     useEffect(() => {
-        if (isLoggedIn) {
-            const token = localStorage.getItem('accessToken');
-            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            const wsHost = process.env.REACT_APP_API_URL ? new URL(process.env.REACT_APP_API_URL).host : 'localhost:8000';
-            const wsUrl = `${protocol}://${wsHost}/ws/notifications/?token=${token}`;
+        let isMounted = true;
+        if (token) {
+            setLoadingProfile(true);
+            axios.get(`${apiUrl}/api/users/me/`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            .then(response => {
+                if (isMounted) setProfileImage(response.data.profile_image);
+            })
+            .catch(error => console.error("Failed to fetch profile", error))
+            .finally(() => {
+                if (isMounted) setLoadingProfile(false);
+            });
 
-            const notificationSocket = new WebSocket(wsUrl);
+            const wsPath = `${wsUrl}/ws/notifications/admin/?token=${token}`;
+            ws.current = new WebSocket(wsPath);
 
-            notificationSocket.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                setNotifications(prev => [data, ...prev]);
+            ws.current.onopen = () => console.log('Admin Notification WebSocket connected');
+            ws.current.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Admin WebSocket message received:', data);
+                if (data.type === 'new_grievance' || data.type === 'grievance_status_update' || data.type === 'new_comment') {
+                   if (isMounted) setNotificationCount(prev => prev + 1);
+                    toast.info(data.payload?.message || 'New activity!');
+                }
             };
-            notificationSocket.onclose = () => console.error('Notification socket closed');
-            return () => notificationSocket.close();
+            ws.current.onclose = (event) => {
+                console.log('Admin Notification WebSocket disconnected:', event.reason);
+            };
+            ws.current.onerror = (error) => {
+                 console.error('Admin WebSocket error:', error);
+            };
+
+            return () => {
+                isMounted = false;
+                if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+                    ws.current.close();
+                }
+            };
+        } else {
+             if (isMounted) setLoadingProfile(false);
         }
-    }, [isLoggedIn]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token, apiUrl, wsUrl]);
 
-    const handleMobileMenuOpen = (event) => setMobileMenuAnchor(event.currentTarget);
-    const handleMobileMenuClose = () => setMobileMenuAnchor(null);
-    const handleNotificationMenuOpen = (event) => setNotificationMenuAnchor(event.currentTarget);
-    const handleNotificationMenuClose = () => setNotificationMenuAnchor(null);
-    
-    const handleNavigate = (path) => {
-        navigate(path);
-        handleMobileMenuClose();
-    };
-
-    const handleNotificationClick = (grievanceId) => {
-        // Clear notifications when one is clicked for simplicity
-        setNotifications([]);
-        handleNotificationMenuClose();
-        navigate(`/admin/grievance/${grievanceId}`);
-    };
-    
     const handleLogout = () => {
         localStorage.clear();
-        handleMobileMenuClose();
+        if (ws.current) ws.current.close();
         navigate('/login');
     };
 
-    const renderDesktopMenu = () => (
-        <>
-            <Typography sx={{ mr: 2 }}>Admin: {userName}</Typography>
-            <Button color="inherit" component={Link} to="/admin/dashboard">Dashboard</Button>
-            <Button color="inherit" component={Link} to="/admin/inbox">Inbox</Button>
-            <Button color="inherit" component={Link} to="/admin/users">Manage Users</Button>
-            
-            <IconButton color="inherit" onClick={handleNotificationMenuOpen}>
-                <Badge badgeContent={notifications.length} color="error">
-                    <NotificationsIcon />
-                </Badge>
-            </IconButton>
+    const handleMenu = (event) => setAnchorEl(event.currentTarget);
+    const handleClose = () => setAnchorEl(null);
+    const handleProfileMenu = (event) => setProfileAnchorEl(event.currentTarget);
+    const handleProfileClose = () => setProfileAnchorEl(null);
 
-            <Button color="inherit" onClick={handleLogout}>Logout</Button>
-        </>
-    );
+    const handleProfile = () => { navigate('/admin/profile'); handleProfileClose(); };
+    const handleChangePassword = () => { navigate('/admin/change-password'); handleProfileClose(); };
+    const handleViewNotifications = () => {
+         navigate('/admin/review');
+         setNotificationCount(0);
+         handleClose();
+    };
 
-    const renderMobileMenu = () => (
-        <>
-            <IconButton color="inherit" onClick={handleMobileMenuOpen}>
-                <MenuIcon />
-            </IconButton>
-            <Menu anchorEl={mobileMenuAnchor} open={Boolean(mobileMenuAnchor)} onClose={handleMobileMenuClose}>
-                <MenuItem disabled>Admin: {userName}</MenuItem>
-                <MenuItem onClick={() => handleNavigate('/admin/dashboard')}>Dashboard</MenuItem>
-                <MenuItem onClick={() => handleNavigate('/admin/inbox')}>Inbox</MenuItem>
-                <MenuItem onClick={() => handleNavigate('/admin/users')}>Manage Users</MenuItem>
-                <MenuItem onClick={handleLogout}>Logout</MenuItem>
-            </Menu>
-        </>
+
+    const drawer = (
+        <div>
+            <Toolbar />
+            <Divider />
+            <List>
+                {navItems.map((item) => (
+                    <ListItem key={item.text} disablePadding>
+                        <ListItemButton
+                            component={RouterLink}
+                            to={item.link}
+                            selected={location.pathname === item.link}
+                            sx={{
+                                '&:hover': { backgroundColor: 'action.hover' },
+                                '&.Mui-selected': {
+                                   backgroundColor: 'action.selected',
+                                   fontWeight: 'fontWeightBold',
+                                 },
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: '40px' }}>
+                                {item.icon}
+                            </ListItemIcon>
+                            <ListItemText primary={item.text} />
+                        </ListItemButton>
+                    </ListItem>
+                ))}
+            </List>
+        </div>
     );
 
     return (
-        <div>
-            <AppBar position="static">
+        <Box sx={{ display: 'flex' }}>
+            <CssBaseline />
+            <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                 <Toolbar>
-                    <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" component="div">
-                             <Link to="/admin/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                SJCET Admin Portal
-                            </Link>
-                        </Typography>
-                    </Box>
-                    {isLoggedIn && (isMobile ? renderMobileMenu() : renderDesktopMenu())}
+                    {/* --- UPDATED TITLE --- */}
+                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+                        St. Joseph's College of Engineering and Technology, Palai (Autonomous) Grievance Admin Portal
+                    </Typography>
+                    {/* --- END UPDATED TITLE --- */}
+
+                    <IconButton color="inherit" onClick={handleMenu} aria-label="show notifications">
+                        <Badge badgeContent={notificationCount} color="error">
+                            <NotificationsIcon />
+                        </Badge>
+                    </IconButton>
+                    <Menu
+                        id="menu-notifications"
+                        anchorEl={anchorEl}
+                        open={Boolean(anchorEl)}
+                        onClose={handleClose}
+                        MenuListProps={{'aria-labelledby': 'button-notifications'}}
+                    >
+                        <MenuItem onClick={handleViewNotifications} disabled={notificationCount === 0}>
+                             View New Activity ({notificationCount})
+                         </MenuItem>
+                    </Menu>
+
+                     <IconButton
+                        color="inherit"
+                        onClick={handleProfileMenu}
+                        aria-label="account of current user"
+                        aria-controls="menu-profile"
+                        aria-haspopup="true"
+                        sx={{ ml: 1 }}
+                     >
+                         {loadingProfile ? <CircularProgress size={24} color="inherit" /> :
+                          (profileImage ? <Avatar src={profileImage} sx={{ width: 32, height: 32 }} /> : <AccountCircle />)}
+                     </IconButton>
+                     <Menu
+                         id="menu-profile"
+                         anchorEl={profileAnchorEl}
+                         open={Boolean(profileAnchorEl)}
+                         onClose={handleProfileClose}
+                         MenuListProps={{'aria-labelledby': 'button-profile'}}
+                         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                     >
+                         <MenuItem onClick={handleProfile}><ManageAccountsIcon fontSize="small" sx={{ mr: 1 }}/> Profile</MenuItem>
+                         <MenuItem onClick={handleChangePassword}><PasswordIcon fontSize="small" sx={{ mr: 1 }}/> Change Password</MenuItem>
+                         <Divider />
+                         <MenuItem onClick={handleLogout}><LogoutIcon fontSize="small" sx={{ mr: 1 }}/> Logout</MenuItem>
+                     </Menu>
                 </Toolbar>
             </AppBar>
-            
-            <Menu
-                anchorEl={notificationMenuAnchor}
-                open={Boolean(notificationMenuAnchor)}
-                onClose={handleNotificationMenuClose}
-                MenuListProps={{ 'aria-labelledby': 'notifications-button' }}
+            <Drawer
+                variant="permanent"
+                sx={{
+                    width: drawerWidth,
+                    flexShrink: 0,
+                    [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+                }}
             >
-                <MenuItem disabled>
-                    <Typography variant="subtitle1">Notifications</Typography>
-                </MenuItem>
-                <Divider />
-                {notifications.length > 0 ? notifications.map((notif, index) => (
-                    <MenuItem key={index} onClick={() => handleNotificationClick(notif.grievance_id)}>
-                        <ListItemText 
-                            primary={`New Chat Request`}
-                            secondary={notif.message} 
-                        />
-                    </MenuItem>
-                )) : (
-                    <MenuItem disabled>No new notifications</MenuItem>
-                )}
-            </Menu>
-
-            <main>
-                <Container sx={{ mt: 4, mb: 4 }}>
-                    <Outlet />
-                </Container>
-            </main>
-        </div>
+                {drawer}
+            </Drawer>
+            <Box
+                component="main"
+                sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}
+            >
+                <Toolbar /> {/* Spacer for AppBar */}
+                <Outlet /> {/* Child routes will render here */}
+            </Box>
+        </Box>
     );
 };
 
